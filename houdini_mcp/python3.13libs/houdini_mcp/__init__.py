@@ -16,6 +16,7 @@ pythonrc.py 에서 이 모듈을 건드릴 때 MCP SDK 까지 끌려오면, SDK 
 툴 등록이 통째로 실패해버린다. 서버는 uiready.py 가 따로 가져간다.
 """
 
+from .media import image_result
 from .registry import (
     AFFINITY_ANY,
     AFFINITY_MAIN,
@@ -31,6 +32,7 @@ __all__ = [
     "ToolRegistry",
     "ToolSpec",
     "get_registry",
+    "image_result",
     "tool",
 ]
 

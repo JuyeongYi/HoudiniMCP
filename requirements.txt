@@ -1,0 +1,15 @@
+# Houdini 의 파이썬에 설치한다. 시스템 파이썬이 아니다.
+#
+#   Windows      "%HFS%\bin\hython.exe" -m pip install -r requirements.txt
+#   Linux/macOS  "$HFS/bin/hython" -m pip install -r requirements.txt
+#
+# 관리자 권한이 없으면 pip 이 user site 로 떨어뜨린다. Houdini 가 그 경로도
+# sys.path 에 잡아주므로 동작은 하지만, 계정별 설치가 되고 다른 Python 3.13
+# 앱과 공유된다. 여럿이 쓰는 머신이라면 관리자 권한으로 설치하는 편이 낫다.
+#
+# Houdini 빌드를 올리면 이 설치는 새 설치본에 따라오지 않는다. 다시 설치해야
+# 한다. 서버가 뜰 때 import 를 확인해서 안내한다.
+
+# 2.0 에서 FastMCP 가 MCPServer 로 이름이 바뀌는 파괴적 변경이 있었다.
+# 우리는 2.x API 에 의존한다: MCPServer, add_tool/remove_tool, ToolError.
+mcp>=2.2,<3

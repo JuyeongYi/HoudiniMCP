@@ -12,10 +12,28 @@
 
 import traceback
 
-SDK_HINT = (
-    "MCP SDK 를 찾지 못해 서버를 띄우지 않습니다. "
-    'Houdini 의 파이썬에 설치하세요:  "$HFS/bin/hython" -m pip install mcp'
-)
+INSTALL_CMD = '"$HFS/bin/hython" -m pip install -r requirements.txt'
+
+
+def _sdk_hint() -> str:
+    """SDK import 가 실패한 이유에 맞는 안내를 만든다.
+
+    아예 없는 것과 버전이 안 맞는 것은 해야 할 일이 다르다. 2.0 에서 FastMCP 가
+    MCPServer 로 바뀌었으므로, 1.x 가 깔려 있어도 import 는 똑같이 실패한다.
+    """
+    try:
+        from importlib.metadata import version
+
+        installed = version("mcp")
+    except Exception:  # noqa: BLE001 - 설치 자체가 없는 경우
+        return (
+            f"MCP SDK 를 찾지 못해 서버를 띄우지 않습니다. Houdini 의 파이썬에 "
+            f"설치하세요:  {INSTALL_CMD}"
+        )
+    return (
+        f"설치된 mcp {installed} 로는 서버를 띄울 수 없습니다. 2.2 이상이 필요합니다 "
+        f"(2.0 에서 FastMCP 가 MCPServer 로 바뀌었습니다). 갱신하세요:  {INSTALL_CMD}"
+    )
 
 
 def _main() -> None:
@@ -35,7 +53,7 @@ def _main() -> None:
     try:
         from houdini_mcp import server
     except ImportError:
-        log.error("%s", SDK_HINT)
+        log.error("%s", _sdk_hint())
         log.debug("%s", traceback.format_exc())
         return
 

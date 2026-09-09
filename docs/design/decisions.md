@@ -125,6 +125,11 @@ UE 는 플러그인 의존성으로 로드 순서가 보장되는데도 옵저�
 user site(`%APPDATA%\Python\Python313\site-packages`)도 동작하지만 — GUI 에서도
 `sys.path` 에 잡히는 것을 확인했다 — 계정별이고 다른 Python 3.13 앱과 공유된다.
 
+**버전은 `requirements.txt` 에 범위로 박는다**: `mcp>=2.2,<3`. 2.0 에서 FastMCP 가
+MCPServer 로 바뀌는 파괴적 변경이 있었으므로 메이저를 넘기면 안 된다. `uiready.py`
+는 import 실패 시 설치된 버전을 확인해서, 아예 없는 것과 버전이 안 맞는 것을
+구분해 안내한다.
+
 ---
 
 ## 6. 트랜스포트는 streamable-http
@@ -294,7 +299,8 @@ URL 과 어긋난다. dcc-mcp-houdini 는 고정 포트 게이트웨이 + first-
 
 ```
 houdini_mcp                  서버 + 레지스트리 (툴 없음)
-├─ houdini_mcp_base          씬·노드·그래프 조회 + 네트워크 무관 노드 편집
+├─ houdini_mcp_base          컨텍스트를 가리지 않는 것 전부 (조회·편집·파라미터·
+│                            지오메트리·뷰포트)
 ├─ houdini_mcp_sop           SOP 전문
 ├─ houdini_mcp_dop           DOP 공통
 │  ├─ houdini_mcp_dop_pyro   솔버별 전문
@@ -305,8 +311,12 @@ houdini_mcp                  서버 + 레지스트리 (툴 없음)
 이렇게 하면 사용자가 필요한 팩만 설치·제거할 수 있고, 로그의 `category` 가
 팩 경계와 일치해 어디서 난 문제인지 바로 드러난다.
 
-**`houdini_mcp_base` 는 예외적으로 조회와 편집을 함께 담는다.** 어떤 작업을 하든
-쓰이므로 나눌 실익이 없다. 파일로만 나눈다(`info.py` / `edit.py`).
+**`houdini_mcp_base` 는 예외다.** 어떤 컨텍스트에서 무엇을 하든 쓰이는 것을 모두
+담고, 모듈로만 나눈다: `info`, `edit`, `parms`, `geometry`, `viewport`.
+
+지오메트리 조회를 SOP 팩으로 뺐다가 base 로 되돌렸다. `geometry()` 를 가진 노드면
+무엇이든 받으므로 DOP 등에서도 필요하기 때문이다. 뷰포트도 마찬가지로, 결과를
+눈으로 확인하는 일은 모든 작업에 따라붙는다.
 
 하위 전문 팩은 상위 팩을 `requires` 에 넣는다. 순서 보장이 아니라 존재 보장이
 목적이다(2·4번 항목 참고).
