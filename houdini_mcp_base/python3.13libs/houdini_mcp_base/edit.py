@@ -188,6 +188,10 @@ def connect_nodes(
 def disconnect_input(path: str, input_index: int = 0) -> dict[str, Any]:
     """노드의 입력 하나를 끊는다.
 
+    주의: merge 처럼 입력 개수가 가변인 노드는 하나를 끊으면 **뒤 입력이 앞으로
+    당겨진다.** 여러 개를 끊을 때 작은 번호부터 끊으면 엉뚱한 입력이 사라진다.
+    반드시 **큰 번호부터** 끊고, 끝나면 node_info 로 확인한다.
+
     Args:
         path: 노드 경로.
         input_index: 끊을 입력 번호.
