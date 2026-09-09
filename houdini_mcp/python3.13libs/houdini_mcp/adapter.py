@@ -40,13 +40,32 @@ def bind(spec: ToolSpec) -> Callable[..., Any]:
                 result = run_in_main_thread(spec.fn, *args, **kwargs)
             else:
                 result = spec.fn(*args, **kwargs)
-        except Exception:
+        except Exception as exc:
             logger.exception("failed %s", spec.name)
-            raise
+            raise _as_tool_error(exc) from exc
         logger.debug("done %s", spec.name)
         return result
 
     return wrapper
+
+
+def _as_tool_error(exc: Exception) -> Exception:
+    """예외를 ToolError 로 바꿔 메시지가 모델에 닿게 한다.
+
+    MCP SDK 는 ToolError 만 메시지를 클라이언트에 실어 보낸다. 다른 예외는
+    크래시로 보고 `Error executing tool <name>` 만 돌려주므로, 모델이 무엇이
+    잘못됐는지 알 수 없어 스스로 고칠 기회를 잃는다.
+
+    원본 예외와 스택은 이미 로그에 ERROR 로 남아 있으므로 진단 정보는 잃지 않는다.
+    """
+    try:
+        from mcp.server.mcpserver.exceptions import ToolError
+    except ImportError:
+        # SDK 가 없으면 그대로 올린다. 단위 테스트 경로다.
+        return exc
+    if isinstance(exc, ToolError):
+        return exc
+    return ToolError(f"{type(exc).__name__}: {exc}")
 
 
 class ToolSync:

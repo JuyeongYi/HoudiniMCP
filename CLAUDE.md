@@ -61,6 +61,48 @@ Houdini 패키지 JSON(`*.json`) 의 `hpath` / `env` 값은 **모든 플랫폼�
 
 ---
 
+## 툴 팩 분리 규칙
+
+**관련 있는 툴끼리 묶어 별도 패키지로 분리한다.** 팩 하나에 이것저것 담지
+않는다. 경계는 Houdini 의 컨텍스트·도메인 계층을 따른다.
+
+```
+houdini_mcp                  서버 + 레지스트리 (툴 없음)
+├─ houdini_mcp_base          씬·노드·그래프 조회 + 네트워크 무관 노드 편집
+├─ houdini_mcp_sop           SOP 전문
+├─ houdini_mcp_dop           DOP 공통
+│  ├─ houdini_mcp_dop_pyro   솔버별 전문
+│  ├─ houdini_mcp_dop_flip
+│  └─ houdini_mcp_dop_rbd
+├─ houdini_mcp_example       툴 팩 만드는 법을 보여주는 최소 예시
+└─ ...
+```
+
+`houdini_mcp_base` 는 예외적으로 조회와 편집을 함께 담는다. 어떤 작업을 하든
+쓰이므로 나눌 실익이 없다. 파일로만 나눈다(`info.py` / `edit.py`).
+
+규칙:
+
+- 이름은 `houdini_mcp_<도메인>` 이고, 계층이 깊어지면 밑줄로 잇는다
+  (`houdini_mcp_dop_pyro`). Houdini 패키지 JSON 파일명, 디렉토리명, Python
+  패키지명이 **모두 같아야** 한다. `requires` 와 로그 `category` 가 이 이름을
+  그대로 쓴다.
+- 모든 툴 팩은 `"requires": ["houdini_mcp"]` 를 넣는다. 하위 전문 팩은 상위 팩도
+  함께 넣는다: `"requires": ["houdini_mcp", "houdini_mcp_base"]`,
+  `"requires": ["houdini_mcp", "houdini_mcp_dop"]`.
+  순서 보장이 아니라 **존재 보장**이 목적이다.
+- 툴 팩은 서버를 import 하지 않는다. `houdini_mcp` 의 레지스트리만 안다.
+- 팩이 커지면 도메인을 더 쪼갠다. 팩 하나가 800줄에 다가가면 분리를 검토한다.
+
+새 팩을 만들 때 필요한 파일은 넷뿐이다:
+
+```
+houdini_mcp_<도메인>.json                                패키지 정의
+houdini_mcp_<도메인>/python3.13libs/pythonrc.py          등록 진입점
+houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/__init__.py
+houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/<모듈>.py
+```
+
 ## 그 밖의 규칙
 
 전역 규칙(파일 크기 경계, 코드 스멜 감지, 주기적 리팩토링)은 사용자 전역
