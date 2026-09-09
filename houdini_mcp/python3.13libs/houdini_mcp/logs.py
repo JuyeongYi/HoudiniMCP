@@ -22,7 +22,8 @@ JSONL 스키마 (뷰어가 요구하는 필드):
     HOUDINI_MCP_LOG_DIR     로그 디렉토리. 기본은 $HOUDINI_USER_PREF_DIR/log.
                             "off" 를 주면 파일 로깅을 끈다.
     HOUDINI_MCP_LOG_LEVEL   기본 INFO.
-    HOUDINI_MCP_LOG_CONSOLE 0 이면 Houdini 콘솔 출력을 끈다. 기본 켜짐.
+    HOUDINI_MCP_LOG_CONSOLE 1 이면 Houdini 콘솔에도 낸다. 기본 꺼짐 -
+                            매 툴 호출마다 Houdini 콘솔 창이 떠서 방해가 된다.
 """
 
 from __future__ import annotations
@@ -129,7 +130,7 @@ def configure(force: bool = False) -> Path | None:
         root.removeHandler(handler)
         handler.close()
 
-    if os.environ.get("HOUDINI_MCP_LOG_CONSOLE", "1") != "0":
+    if os.environ.get("HOUDINI_MCP_LOG_CONSOLE", "0") == "1":
         # 콘솔은 사람이 읽으므로 JSONL 이 아니라 평문으로 낸다.
         console = logging.StreamHandler(sys.stdout)
         console.setFormatter(logging.Formatter(CONSOLE_FORMAT, DATE_FORMAT))

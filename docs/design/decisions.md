@@ -226,9 +226,9 @@ This is mcp 2.x, where FastMCP was renamed to MCPServer ...
 **결정**: 포트가 이미 쓰이고 있으면 서버를 띄우지 않고 경고만 남긴다. 보통 다른
 Houdini 인스턴스가 먼저 떠 있는 경우다.
 
-경고는 `print` 와 **Houdini 상태바**(`hou.ui.setStatusMessage`) 양쪽에 낸다.
-Houdini 는 stdout 을 자체 콘솔 창에 띄워주므로 `print` 만으로도 보이지만, 그 창을
-계속 보고 있지는 않으므로 상태바에도 남긴다.
+경고는 로그와 **Houdini 상태바**(`hou.ui.setStatusMessage`) 양쪽에 낸다.
+로그는 기본적으로 파일에만 쌓이므로(11번 항목), 사용자가 바로 알아채야 하는
+이런 경고는 상태바에도 띄운다.
 
 두 번째 인스턴스를 따로 붙이려면 `HOUDINI_MCP_PORT` 를 다르게 준다
 (`scripts/run-houdini.ps1 -Port 9801`).
@@ -266,7 +266,9 @@ URL 과 어긋난다. dcc-mcp-houdini 는 고정 포트 게이트웨이 + first-
 
 `ensure_ascii=False` 로 한글을 그대로 남긴다.
 
-**콘솔은 JSONL 이 아니다.** Houdini 콘솔 창은 사람이 읽으므로 평문으로 낸다.
+**콘솔 출력은 기본으로 끈다.** 켜 두면 툴을 부를 때마다 Houdini 콘솔 창이 떠서
+작업을 방해한다. 로그는 파일에만 쌓고, 필요할 때 뷰어로 본다.
+`HOUDINI_MCP_LOG_CONSOLE=1` 로 켜면 평문으로 낸다(콘솔은 사람이 읽으므로).
 
 **툴 팩 이름은 자동으로 잡는다**: `tool` 데코레이터가 함수의 `__module__` 최상위
 이름을 `ToolSpec.package` 에 채운다(`registry.infer_package`). 툴 작성자가 따로
@@ -279,7 +281,7 @@ URL 과 어긋난다. dcc-mcp-houdini 는 고정 포트 게이트웨이 + first-
 |---|---|---|
 | `HOUDINI_MCP_LOG_DIR` | `$HOUDINI_USER_PREF_DIR/log` | `off` 로 파일 로깅 해제 |
 | `HOUDINI_MCP_LOG_LEVEL` | `INFO` | |
-| `HOUDINI_MCP_LOG_CONSOLE` | `1` | `0` 이면 Houdini 콘솔 출력 해제 |
+| `HOUDINI_MCP_LOG_CONSOLE` | `0` | `1` 이면 Houdini 콘솔에도 출력 |
 
 파일은 5MB 단위로 3개까지 로테이션한다.
 

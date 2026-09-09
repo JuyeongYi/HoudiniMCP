@@ -27,6 +27,10 @@
     로그는 houdini_mcp.jsonl 하나에 JSONL 로 쌓인다.
     "off" 를 주면 파일 로깅을 끈다.
 
+.PARAMETER ConsoleLog
+    로그를 Houdini 콘솔에도 낸다. 기본은 파일에만 쌓는다 - 켜면 툴을 부를 때마다
+    콘솔 창이 떠서 작업을 방해한다.
+
 .PARAMETER Wait
     Houdini 가 종료될 때까지 기다린다.
 
@@ -46,6 +50,7 @@ param(
     [switch]$IsolatePrefs,
     [switch]$NoTools,
     [string]$LogDir,
+    [switch]$ConsoleLog,
     [switch]$Wait,
     [switch]$DryRun
 )
@@ -113,6 +118,9 @@ if ($IsolatePrefs) {
 if ($LogDir) {
     $env:HOUDINI_MCP_LOG_DIR = $LogDir
 }
+if ($ConsoleLog) {
+    $env:HOUDINI_MCP_LOG_CONSOLE = "1"
+}
 Write-Host "Houdini      : $exe"
 Write-Host "PACKAGE_DIR  : $env:HOUDINI_PACKAGE_DIR"
 Write-Host "MCP_PORT     : $env:HOUDINI_MCP_PORT"
@@ -121,6 +129,7 @@ if ($IsolatePrefs) { Write-Host "USER_PREF_DIR: $env:HOUDINI_USER_PREF_DIR" }
 if ($NoTools)      { Write-Host "TOOLS        : (제외됨)" }
 if ($LogDir)       { Write-Host "LOG_DIR      : $env:HOUDINI_MCP_LOG_DIR" }
 else               { Write-Host "LOG_DIR      : (기본) <USER_PREF_DIR>/log" }
+if ($ConsoleLog)   { Write-Host "LOG_CONSOLE  : 콘솔에도 출력" }
 
 if ($DryRun) {
     Write-Host "`n-DryRun 이므로 실행하지 않습니다."
@@ -133,5 +142,5 @@ if ($Wait) {
 } else {
     Start-Process -FilePath $exe
     Write-Host "Houdini 를 띄웠습니다. UI 가 준비되면 MCP 서버가 뜹니다."
-    Write-Host "로그는 Houdini 콘솔 창과 로그 파일 양쪽에 남습니다."
+    Write-Host "로그는 파일에만 쌓입니다(-ConsoleLog 로 콘솔에도 낼 수 있습니다)."
 }
