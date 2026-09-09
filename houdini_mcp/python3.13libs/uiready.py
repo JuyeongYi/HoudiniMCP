@@ -45,10 +45,10 @@ def _main() -> None:
         traceback.print_exc()
         return
 
-    log_dir = configure()
+    log_path = configure()
     log = get_logger("startup")
-    if log_dir is not None:
-        log.info("로그 디렉토리: %s", log_dir)
+    if log_path is not None:
+        log.info("로그 파일: %s", log_path)
 
     try:
         from houdini_mcp import server

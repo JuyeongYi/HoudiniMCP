@@ -25,6 +25,7 @@ from .registry import (
     get_registry,
     tool,
 )
+from .undo import undoable
 
 __all__ = [
     "AFFINITY_ANY",
@@ -34,6 +35,7 @@ __all__ = [
     "get_registry",
     "image_result",
     "tool",
+    "undoable",
 ]
 
 __version__ = "0.1.0"

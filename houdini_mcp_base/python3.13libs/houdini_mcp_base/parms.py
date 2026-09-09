@@ -112,7 +112,7 @@ def _details(template: hou.ParmTemplate) -> dict[str, Any]:
 def list_parms(
     path: str, pattern: str = "*", changed_only: bool = False
 ) -> dict[str, Any]:
-    """노드의 파라미터를 이름·라벨·타입·현재 값과 함께 나열한다.
+    """노드의 파라미터를 이름·라벨·타입·현재 값과 함께 나열한다. 노드 코멘트도 준다.
 
     노드마다 파라미터가 수백 개라, 기본적으로 패턴으로 걸러 쓰는 것을 권한다.
 
@@ -130,6 +130,7 @@ def list_parms(
     return {
         "path": node.path(),
         "type": node.type().name(),
+        "comment": node.comment(),
         "count": len(matched),
         "parms": [_describe(parm) for parm in matched],
     }
@@ -155,4 +156,8 @@ def parm_info(path: str, name: str) -> dict[str, Any]:
                 f"{name!r} 은 벡터 파라미터입니다. 성분 이름으로 보세요: {components}"
             )
         raise ValueError(f"{path} 에 그런 파라미터가 없습니다: {name}")
-    return _describe(parm, detailed=True)
+
+    described = _describe(parm, detailed=True)
+    # 파라미터만 보면 맥락이 없다. 노드가 무엇을 위한 것인지 함께 준다.
+    described["node"] = {"path": node.path(), "comment": node.comment()}
+    return described

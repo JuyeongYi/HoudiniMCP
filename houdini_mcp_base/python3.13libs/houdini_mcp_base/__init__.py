@@ -9,8 +9,9 @@
     viewport  뷰포트 캡처와 프레이밍 - 만든 결과를 눈으로 확인한다
 
 특정 컨텍스트에만 의미가 있는 툴은 전용 팩(houdini_mcp_sop 등)으로 분리한다.
+
+여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩
+격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.
 """
 
-from . import edit, geometry, info, parms, viewport  # noqa: F401 - import 가 곧 등록이다
-
-__all__ = ["edit", "geometry", "info", "parms", "viewport"]
+TOOL_MODULES = ("info", "edit", "parms", "geometry", "viewport")

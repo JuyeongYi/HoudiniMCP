@@ -115,6 +115,75 @@ houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/__init__.py
 houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/<모듈>.py
 ```
 
+## 툴 작성 규칙
+
+### 씬을 바꾸는 툴은 `@undoable` 로 감싼다
+
+툴 호출 하나가 Undo 하나가 되어야 한다. 사용자가 Ctrl+Z 한 번으로 모델이 한 일을
+되돌릴 수 있어야 하기 때문이다. 툴 안에서 노드를 만들고 파라미터를 걸고 연결까지
+했더라도 마찬가지다.
+
+```python
+@tool()
+@undoable("노드 생성")
+def create_node(...):
+    ...
+```
+
+데코레이터 순서가 중요하다. `@undoable` 이 아래(먼저 적용)에 와야 레지스트리에
+등록되는 것이 Undo 로 감싼 함수가 된다. 함수 안에서 `with hou.undos.group(...)` 을
+직접 쓰지 않는다.
+
+### 노드를 만들 때 코멘트를 강제한다
+
+`comment` 를 **기본값 없는 인자**로 둔다. 그래야 MCP 입력 스키마에서 required 가
+되어 빠뜨릴 수 없다. 나중에 이 씬을 여는 사람이 노드가 왜 있는지 알 수 있어야
+한다.
+
+```python
+def create_node(parent: str, node_type: str, comment: str, name: str | None = None):
+```
+
+코멘트는 `setComment` 로 달고 `hou.nodeFlag.DisplayComment` 를 켜서 네트워크
+뷰에도 보이게 한다. 노드 생성 시점에는 넣을 수 없으므로 만든 직후에 지정한다.
+
+### 노드를 읽는 툴은 코멘트를 함께 준다
+
+`node_info`, `list_children`, `network_graph`, `find_nodes`, `get_parms`,
+`list_parms`, `parm_info` 처럼 노드를 돌려주는 것은 전부 `comment` 를 포함한다.
+이름과 타입만으로는 그 노드가 왜 있는지 알 수 없다.
+
+### 노드 이름은 역할이 드러나게
+
+`box1`, `geo2` 같은 기본 이름을 쓰지 않는다. `wall_body`, `merlon_points`,
+`copy_merlons` 처럼 무엇을 하는지 드러나게 짓는다. 툴 docstring 에 이 지침을
+적어 두어 모델이 읽게 한다.
+
+### Houdini 로 들어가는 문자열은 영어로
+
+씬 파일에 저장되거나 Houdini UI 에 뜨는 문자열은 영어로 쓴다. 노드 이름, 노드
+코멘트, `@undoable` 레이블이 여기 해당한다. 씬을 여는 사람의 로케일과 무관해야
+하고, 다른 도구에서도 읽히기 때문이다.
+
+코드 주석과 docstring 은 한국어를 그대로 쓴다. 그것은 이 저장소 안에만 있다.
+
+### 실패는 다음에 무엇을 할지 알려 준다
+
+툴 예외 메시지는 그대로 모델에게 간다(`adapter` 가 `ToolError` 로 감싼다).
+무엇이 잘못됐는지만이 아니라 어떻게 고치는지까지 적는다.
+
+```
+'t' 은 벡터 파라미터입니다. 성분 이름으로 거세요: tx, ty, tz
+```
+
+### 팩은 서버가 없어도 Houdini 를 막지 않는다
+
+- `pythonrc.py` 는 `except Exception` 으로 받는다. `ImportError` 만 잡으면 서버
+  패키지가 다른 이유로 깨졌을 때 Houdini 기동이 막힌다.
+- 팩의 `__init__.py` 는 모듈을 import 하지 않고 `TOOL_MODULES` 로 선언만 한다.
+  `register_pack` 이 하나씩 격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은
+  등록된다.
+
 ## 그 밖의 규칙
 
 전역 규칙(파일 크기 경계, 코드 스멜 감지, 주기적 리팩토링)은 사용자 전역

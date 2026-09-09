@@ -23,11 +23,16 @@ def _require(path: str) -> hou.Node:
 
 
 def _brief(node: hou.Node) -> dict[str, Any]:
-    """노드 하나를 짧게 요약한다. 목록에 쓴다."""
+    """노드 하나를 짧게 요약한다. 목록에 쓴다.
+
+    코멘트는 항상 함께 준다. 노드가 왜 있는지가 이름과 타입만으로는 드러나지
+    않기 때문이다.
+    """
     return {
         "name": node.name(),
         "path": node.path(),
         "type": node.type().name(),
+        "comment": node.comment(),
     }
 
 
@@ -78,6 +83,7 @@ def node_info(path: str, include_parameters: bool = False) -> dict[str, Any]:
         "name": node.name(),
         "path": node.path(),
         "type": node.type().name(),
+        "comment": node.comment(),
         "category": node.type().category().name(),
         "parent": parent.path() if parent is not None else None,
         "child_count": len(node.children()),
@@ -176,7 +182,7 @@ def network_graph(path: str = "/obj", depth: int = 1) -> dict[str, Any]:
 
 @tool()
 def get_parms(path: str, names: list[str] | None = None) -> dict[str, Any]:
-    """노드 파라미터 값을 읽는다.
+    """노드 파라미터 값과 그 노드의 코멘트를 읽는다.
 
     Args:
         path: 노드 경로.
@@ -192,10 +198,12 @@ def get_parms(path: str, names: list[str] | None = None) -> dict[str, Any]:
             if parm is None:
                 raise ValueError(f"{path} 에 그런 파라미터가 없습니다: {name}")
             values[name] = parm.eval()
-        return values
+    else:
+        values = {
+            parm.name(): parm.eval()
+            for parm in node.parms()
+            if not parm.isAtDefault()
+        }
 
-    return {
-        parm.name(): parm.eval()
-        for parm in node.parms()
-        if not parm.isAtDefault()
-    }
+    # 값만 보면 이 노드가 무엇을 위한 것인지 알 수 없다. 코멘트를 함께 준다.
+    return {"path": node.path(), "comment": node.comment(), "values": values}
