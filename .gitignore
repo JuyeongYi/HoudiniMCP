@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Houdini 임시/백업
+backup/
+*.autosave
+*.hip.bak
+
+# 로그 (HOUDINI_MCP_LOG_DIR 을 repo 안으로 지정했을 때)
+log/
+houdini_mcp.jsonl*

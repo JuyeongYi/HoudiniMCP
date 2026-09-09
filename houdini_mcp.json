@@ -1,0 +1,9 @@
+{
+    "env": [
+        {
+            "HOUDINI_MCP": "$HOUDINI_PACKAGE_PATH/houdini_mcp"
+        }
+    ],
+    "hpath": "$HOUDINI_MCP",
+    "enable": "houdini_version >= '22.0'"
+}
