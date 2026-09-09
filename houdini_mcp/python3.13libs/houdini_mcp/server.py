@@ -23,7 +23,11 @@ from .registry import get_registry
 _log = get_logger("server")
 
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 9800
+DEFAULT_PORT = 22926
+"""int("HOU", 36) - 알파벳을 36진수로 읽은 값이다.
+
+기억하기 쉽고, 흔히 쓰이는 대역(8000/9000번대)을 피해 충돌 가능성이 낮다.
+"""
 DEFAULT_PATH = "/mcp"
 
 SERVER_NAME = "houdini-mcp"

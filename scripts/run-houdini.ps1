@@ -8,7 +8,7 @@
     끈 상태로 Houdini 를 쓰고 싶을 때 편하다.
 
 .PARAMETER Port
-    MCP 서버 포트. 기본 9800.
+    MCP 서버 포트. 기본 22926 (= int("HOU", 36)).
     Houdini 를 두 개 이상 띄울 때는 두 번째부터 다른 값을 줘야 한다. 같은 포트면
     나중에 뜬 인스턴스는 서버를 띄우지 않고 경고만 남긴다(first-wins).
 
@@ -41,11 +41,11 @@
     .\scripts\run-houdini.ps1
 
 .EXAMPLE
-    .\scripts\run-houdini.ps1 -Port 9801 -IsolatePrefs
+    .\scripts\run-houdini.ps1 -Port 22927 -IsolatePrefs
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 9800,
+    [int]$Port = 22926,
     [string]$HfsPath,
     [switch]$IsolatePrefs,
     [switch]$NoTools,
