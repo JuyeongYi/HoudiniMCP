@@ -14,7 +14,6 @@ import os
 import socket
 import sys
 import threading
-import warnings
 from typing import Any
 
 from .adapter import ToolSync
@@ -81,25 +80,6 @@ def _warn(message: str) -> None:
         pass
 
 
-def _import_mcp_server() -> Any:
-    """MCP SDK 의 MCPServer 를 가져온다.
-
-    import 중에 나는 경고는 콘솔로 흘리지 않고 로그에만 남긴다. Houdini 는 stdout
-    을 콘솔 창에 띄우므로, 그대로 두면 서버를 띄울 때마다 창이 뜬다.
-
-    실제로 SDK 를 import 하면 cryptography 가 OpenSSL 의 legacy provider 를 못
-    찾는다는 경고를 낸다. 우리는 legacy 알고리즘(RC4, MD5 기반 등)을 쓰지 않고
-    로컬 루프백으로만 통신하므로 무해하다.
-    """
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        from mcp.server.mcpserver import MCPServer
-
-    for entry in caught:
-        _log.debug("SDK import 경고: %s", entry.message)
-    return MCPServer
-
-
 def _env_int(name: str, default: int) -> int:
     raw = os.environ.get(name)
     if not raw:
@@ -162,9 +142,9 @@ class HoudiniMCPServer:
 
         # import 는 여기서 한다. SDK 가 없을 때 모듈 import 자체가 실패하면
         # 안내 메시지를 낼 기회조차 없어진다.
-        mcp_server_cls = _import_mcp_server()
+        from mcp.server.mcpserver import MCPServer
 
-        self._server = mcp_server_cls(
+        self._server = MCPServer(
             name=SERVER_NAME,
             version=SERVER_VERSION,
             instructions=(

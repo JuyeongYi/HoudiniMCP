@@ -2,6 +2,9 @@
     "env": [
         {
             "HOUDINI_MCP": "$HOUDINI_PACKAGE_PATH/houdini_mcp"
+        },
+        {
+            "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "1"
         }
     ],
     "hpath": "$HOUDINI_MCP",

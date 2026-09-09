@@ -353,6 +353,36 @@ houdini_mcp                  서버 + 레지스트리 (툴 없음)
 
 ---
 
+## 14. 콘솔은 조용해야 한다
+
+Houdini 는 stdout 을 자체 콘솔 창에 띄운다. 그래서 뭔가 출력될 때마다 창이 떠서
+작업을 방해한다. 로그는 파일에만 쌓고, 콘솔로 새는 경로를 전부 막았다.
+
+| 새던 경로 | 조치 |
+|---|---|
+| 우리 로거 | 콘솔 핸들러를 기본으로 끈다(11번 항목) |
+| 루트 로거로 전파 | `houdini_mcp` 로거에 `propagate = False` |
+| uvicorn 이 설치하는 기본 로깅 | `uvicorn.Config(log_config=None)` 으로 설정 자체를 건너뛴다 |
+| uvicorn / mcp / sse_starlette 로거 | 핸들러를 걷어내고 우리 JSONL 파일 핸들러를 붙인다 |
+| `import mcp` 의 OpenSSL 경고 | `CRYPTOGRAPHY_OPENSSL_NO_LEGACY=1` 로 **원인을 끈다** |
+
+`MCPServer.run_streamable_http_async()` 를 쓰지 않고 `streamable_http_app()` 으로
+앱만 받아 uvicorn 을 직접 띄우는 이유가 세 번째 줄이다. 그 메서드는
+`uvicorn.Config` 에 `log_config` 를 넘기지 않아 uvicorn 기본 로깅이 깔린다.
+
+마지막 줄은 처음에 `warnings.catch_warnings` 로 감쌌다가 되돌렸다. **경고를 감추는
+것과 원인을 끄는 것은 다르다.** cryptography 는 OpenSSL 3 의 legacy provider 를
+못 찾으면 경고를 내는데, 이 환경변수를 주면 아예 로드를 시도하지 않는다. 우리는
+legacy 알고리즘(RC4, MD5 기반 등)을 쓰지 않으므로 잃는 것이 없고, 의도가 코드에
+드러난다. 환경변수는 `houdini_mcp.json` 의 `env` 에 둔다 - import 보다 먼저
+설정되어야 하기 때문이다.
+
+검증: GUI 로 띄웠을 때 Houdini 콘솔 출력에 MCP 관련 줄이 하나도 없고, 로그
+파일에는 `uvicorn.error` 와 `mcp.server.streamable_http_manager` 카테고리까지
+남는다.
+
+---
+
 ## 부록: 실측하다 걸린 환경 함정
 
 **`HOUDINI_USER_PREF_DIR` 은 `__HVER__` 없으면 무시된다**
