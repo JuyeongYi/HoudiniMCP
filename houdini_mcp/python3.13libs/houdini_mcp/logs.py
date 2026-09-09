@@ -54,6 +54,19 @@ _LEVEL_MAP = {
     "FATAL": "error",
 }
 
+THIRD_PARTY_LOGGERS = (
+    "uvicorn",
+    "uvicorn.error",
+    "uvicorn.access",
+    "mcp",
+    "sse_starlette",
+)
+"""서버가 끌어오는 라이브러리들의 로거.
+
+이들은 자기 핸들러를 stdout 에 붙인다. 그대로 두면 Houdini 콘솔 창이 계속 떠서
+작업을 방해하므로, 핸들러를 걷어내고 우리 파일로만 보낸다. 정보는 잃지 않는다.
+"""
+
 _configured = False
 _log_path: Path | None = None
 
@@ -125,6 +138,9 @@ def configure(force: bool = False) -> Path | None:
 
     root = logging.getLogger(ROOT_NAME)
     root.setLevel(level)
+    # 루트 로거로 올려보내지 않는다. Houdini 나 다른 라이브러리가 루트에 stdout
+    # 핸들러를 붙여 두면 우리 로그까지 콘솔에 새어 나간다.
+    root.propagate = False
     # Houdini 세션이 재시작 없이 다시 설정될 수 있다. 중복 출력을 막는다.
     for handler in list(root.handlers):
         root.removeHandler(handler)
@@ -156,8 +172,30 @@ def configure(force: bool = False) -> Path | None:
         except OSError as exc:
             print(f"[houdini_mcp] 로그 파일을 만들지 못했습니다: {log_dir} ({exc})")
 
+    quiet_third_party()
+
     _configured = True
     return _log_path
+
+
+def quiet_third_party() -> None:
+    """서드파티 로거의 콘솔 출력을 걷어내고 우리 파일로 보낸다.
+
+    uvicorn 은 서버를 띄우면서 자기 로깅을 다시 설정하므로, 서버 기동 뒤에도 한 번
+    더 불러야 할 수 있다.
+    """
+    file_handlers = [
+        h for h in logging.getLogger(ROOT_NAME).handlers
+        if isinstance(h, logging.handlers.RotatingFileHandler)
+    ]
+    for name in THIRD_PARTY_LOGGERS:
+        logger = logging.getLogger(name)
+        for handler in list(logger.handlers):
+            logger.removeHandler(handler)
+            handler.close()
+        logger.propagate = False
+        for handler in file_handlers:
+            logger.addHandler(handler)
 
 
 def get_logger(name: str) -> logging.Logger:

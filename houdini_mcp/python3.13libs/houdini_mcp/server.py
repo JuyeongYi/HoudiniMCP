@@ -14,10 +14,11 @@ import os
 import socket
 import sys
 import threading
+import warnings
 from typing import Any
 
 from .adapter import ToolSync
-from .logs import get_logger
+from .logs import get_logger, quiet_third_party
 from .registry import get_registry
 
 _log = get_logger("server")
@@ -78,6 +79,25 @@ def _warn(message: str) -> None:
             )
     except Exception:  # noqa: BLE001 - 경고를 못 띄운다고 기동을 막을 이유는 없다
         pass
+
+
+def _import_mcp_server() -> Any:
+    """MCP SDK 의 MCPServer 를 가져온다.
+
+    import 중에 나는 경고는 콘솔로 흘리지 않고 로그에만 남긴다. Houdini 는 stdout
+    을 콘솔 창에 띄우므로, 그대로 두면 서버를 띄울 때마다 창이 뜬다.
+
+    실제로 SDK 를 import 하면 cryptography 가 OpenSSL 의 legacy provider 를 못
+    찾는다는 경고를 낸다. 우리는 legacy 알고리즘(RC4, MD5 기반 등)을 쓰지 않고
+    로컬 루프백으로만 통신하므로 무해하다.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        from mcp.server.mcpserver import MCPServer
+
+    for entry in caught:
+        _log.debug("SDK import 경고: %s", entry.message)
+    return MCPServer
 
 
 def _env_int(name: str, default: int) -> int:
@@ -142,9 +162,9 @@ class HoudiniMCPServer:
 
         # import 는 여기서 한다. SDK 가 없을 때 모듈 import 자체가 실패하면
         # 안내 메시지를 낼 기회조차 없어진다.
-        from mcp.server.mcpserver import MCPServer
+        mcp_server_cls = _import_mcp_server()
 
-        self._server = MCPServer(
+        self._server = mcp_server_cls(
             name=SERVER_NAME,
             version=SERVER_VERSION,
             instructions=(
@@ -169,13 +189,7 @@ class HoudiniMCPServer:
         self._loop = loop
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                self._server.run_streamable_http_async(
-                    host=self.host,
-                    port=self.port,
-                    streamable_http_path=self.path,
-                )
-            )
+            loop.run_until_complete(self._serve_forever())
         except BaseException as exc:  # noqa: BLE001 - 조용히 죽으면 진단이 어렵다
             import traceback
 
@@ -185,6 +199,33 @@ class HoudiniMCPServer:
         finally:
             self._loop = None
             loop.close()
+
+    async def _serve_forever(self) -> None:
+        """uvicorn 을 직접 띄운다.
+
+        MCPServer.run_streamable_http_async() 를 쓰지 않는 이유는 그것이
+        uvicorn.Config 에 log_config 를 넘기지 않아서다. 그러면 uvicorn 이 자기
+        기본 로깅을 설치해 Houdini 콘솔 창에 로그를 쏟는다. log_config=None 으로
+        그 설정 자체를 건너뛰고, 로그는 우리 파일 핸들러로 받는다.
+        """
+        import uvicorn
+
+        app = self._server.streamable_http_app(
+            streamable_http_path=self.path, host=self.host
+        )
+        config = uvicorn.Config(
+            app,
+            host=self.host,
+            port=self.port,
+            log_config=None,   # uvicorn 이 로깅을 건드리지 않게 한다
+            access_log=False,
+        )
+        server = uvicorn.Server(config)
+        # 시그널 핸들러는 메인 스레드에서만 걸 수 있다. 여기는 워커 스레드다.
+        server.install_signal_handlers = lambda: None
+
+        quiet_third_party()
+        await server.serve()
 
     def stop(self) -> None:
         if self._sync is not None:
