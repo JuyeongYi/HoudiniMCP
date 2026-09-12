@@ -385,7 +385,9 @@ validate_rig                        -> 지적 0개
 데이터를 같은 수로 세는지도 함께 본다 — 두 툴이 다르게 세면 둘 중 하나가 틀린
 것이다.
 
-> 테스트 파일 이름이 `scenario.py` 가 아니라 `rig_scenario.py` 인 이유가 있다.
-> pytest 가 테스트 디렉토리를 `sys.path` 에 올리기 때문에 팩마다 `scenario.py` 를
-> 두면 모듈 이름이 부딪쳐, 먼저 읽힌 쪽이 다른 팩 테스트를 통째로 깨뜨린다
-> (실측으로 밟았다).
+> **팩마다 `tests/<팩>/scenario.py` 를 두므로 `from scenario import MARKER` 로
+> 읽으면 안 된다.** pytest 가 테스트 디렉토리를 `sys.path` 에 올리는데, 먼저 읽힌
+> 팩의 것이 `sys.modules["scenario"]` 를 차지해 나중에 읽는 팩이 남의 MARKER 를
+> 쓰게 된다. 실제로 밟았다 — sop 테스트 17개가 통째로 깨졌다.
+> `importlib.util.spec_from_file_location` 으로 팩 전용 모듈 이름을 붙여 읽는다
+> (`houdini_mcp_rig_scenario`). chop 팩이 먼저 세운 방식을 그대로 따랐다.
