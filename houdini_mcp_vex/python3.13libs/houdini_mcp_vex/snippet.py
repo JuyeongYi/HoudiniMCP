@@ -1,8 +1,16 @@
-"""wrangle 스니펫(`@P.y += 1;`)을 vcc 가 먹을 수 있는 순수 VEX 로 옮긴다.
+"""VEXpression(`@P.y += 1;`)을 vcc 가 먹을 수 있는 순수 VEX 로 옮긴다.
 
-`@` 문법은 VEX 언어가 아니다. vcc 에 그대로 넣으면 `Unknown token '@'` 가 난다.
-Houdini 의 Snippet VOP 이 스니펫을 CVEX 함수로 감싸면서 `@name` 을 바인딩된
-파라미터로 바꿔 주는데, 그 변환을 여기서 우리가 똑같이 한다.
+wrangle 에 쓰는 것은 VEX 가 아니라 **VEXpression** 이다. 지어낸 이름이 아니라
+wrangle 의 `snippet` 파라미터 라벨이 Houdini 안에서 그대로 `VEXpression` 이다
+(실측 - attribwrangle / volumewrangle / pointwrangle 셋 다).
+
+둘의 차이가 이 모듈이 있는 이유다. VEX 에는 `@` 가 없고 vcc 는 VEX 만 받는다.
+`@name` 은 Snippet VOP 이 스니펫을 CVEX 함수로 감싸면서 바인딩된 파라미터로
+바꿔 주는 설탕이다. 그 변환을 여기서 우리가 똑같이 한다 - `@` 가 틀린 것이
+아니라 층이 다른 것이므로, 아래로 한 층 내려 주면 vcc 가 읽는다.
+
+Houdini 에게 그 변환을 시킬 수는 없다. attribwrangle 안의 attribvop1 은
+canGenerateCookCode() 가 False 라 생성된 코드를 꺼낼 수 없다.
 
 ## 줄·열 번호를 보존하는 방법
 

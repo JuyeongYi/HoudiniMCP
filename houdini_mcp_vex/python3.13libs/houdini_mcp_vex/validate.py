@@ -283,11 +283,16 @@ def validate_vex(
     attrib_types: dict[str, str] | None = None,
     include_dirs: list[str] | None = None,
 ) -> dict[str, Any]:
-    """VEX 를 컴파일해서 검증한다. 노드를 만들지 않고 씬도 건드리지 않는다.
+    """wrangle 코드를 컴파일해서 검증한다. 노드를 만들지 않고 씬도 안 건드린다.
 
     Houdini 의 VEX 컴파일러(`$HFS/bin/vcc`)를 직접 부른다. 그래서 입력
     지오메트리가 없어도, 씬이 비어 있어도 검증된다. 에러는 줄·열 번호와 그 줄의
     원문까지 함께 준다.
+
+    받는 것은 정확히는 VEX 가 아니라 **VEXpression** 이다 - wrangle 의 코드
+    파라미터 라벨이 그것이고, `@P` 같은 바인딩이 여기 속한다. VEX 자체에는
+    `@` 가 없어서 vcc 가 그대로는 못 읽으므로, 이 툴이 먼저 순수 VEX 로
+    옮긴 뒤 컴파일한다. 순수 VEX 를 직접 쓸 때는 mode="source" 를 준다.
 
     wrangle 에 넣을 코드를 쓸 때는 이것을 먼저 통과시킨다. create_wrangle 과
     update_wrangle 은 어차피 내부에서 이 검증을 거치므로, 코드를 여러 번 고칠
@@ -297,9 +302,9 @@ def validate_vex(
     channels 는 `chf("scale")` 처럼 스페어 파라미터를 요구하는 호출이다.
 
     Args:
-        code: 검증할 코드. mode 에 따라 스니펫이거나 완전한 VEX 소스다.
-        mode: "snippet" 이면 wrangle 에 넣는 조각(`@P.y += 1;`)으로 본다.
-            "source" 면 컨텍스트 함수까지 직접 쓴 VEX 파일로 본다.
+        code: 검증할 코드. mode 에 따라 VEXpression 이거나 순수 VEX 소스다.
+        mode: "snippet" 이면 wrangle 에 넣는 VEXpression(`@P.y += 1;`)으로
+            본다. "source" 면 컨텍스트 함수까지 직접 쓴 순수 VEX 파일로 본다.
         context: VEX 컨텍스트. wrangle 스니펫은 전부 "cvex" 다. 셰이더 소스를
             볼 때만 "surface" 등으로 바꾼다. list_vex_contexts 로 목록을 본다.
         attrib_types: 접두사를 쓰지 않은 어트리뷰트의 타입을 직접 지정한다.

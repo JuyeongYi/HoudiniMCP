@@ -78,18 +78,38 @@ vex:1:5-9: Warning 2005: Implicit cast from float to int. Use explicit cast inst
 다이얼로그 스크립트로 내보낸다. 스니펫 안의 `chf("scale")` 은 보지 않는다.
 그래서 ch() 호출은 우리가 직접 훑는다.
 
-## 가장 큰 걸림돌 — `@` 는 VEX 문법이 아니다
+## 가장 큰 걸림돌 — 우리가 받는 것은 VEX 가 아니라 VEXpression 이다
 
 계획서에 없던 것이고, 이 팩에서 가장 손이 많이 간 곳이다.
+
+**둘은 다른 것이다.**
+
+| | 무엇 | 누가 읽나 |
+|---|---|---|
+| VEX | 언어 자체. `@` 가 없다 | `vcc` 가 컴파일한다 |
+| VEXpression | wrangle 스니펫 방언. `@P` 같은 바인딩이 있다 | Snippet VOP 이 CVEX 파라미터로 바꾼다 |
+
+이름을 지어낸 것이 아니다. wrangle 의 `snippet` 파라미터는 Houdini 안에서
+**라벨이 그대로 `VEXpression`** 이다(실측 — `attribwrangle`,
+`volumewrangle`, `pointwrangle` 셋 다). 모델도 사용자도 "VEX 를 쓴다" 고
+말하지만 실제로 손에 쥐는 것은 VEXpression 이다.
+
+그래서 VEXpression 을 vcc 에 그냥 넣으면 안 된다.
 
 ```
 $ vcc -c sop -o stdout bare.vfl
 bare.vfl:1:1: Error 1109: Unknown token '@'
 ```
 
-`@P` 는 Snippet VOP 이 CVEX 함수 파라미터로 바꿔 주는 설탕이다. vcc 에 그냥
-넣으면 안 된다. `attribwrangle` 안의 `attribvop1` 은 `canGenerateCookCode()` 가
-False 라 생성된 코드를 꺼낼 수도 없다.
+`@` 가 잘못된 것이 아니라 **층이 다른 것**이다. `@P` 는 Snippet VOP 이
+CVEX 함수 파라미터로 바꿔 주는 설탕이고, vcc 는 그 변환이 끝난 뒤의 VEX 를
+받는다. 그 변환을 Houdini 에게 시킬 수도 없다 — `attribwrangle` 안의
+`attribvop1` 은 `canGenerateCookCode()` 가 False 라 생성된 코드를 꺼낼 수
+없다.
+
+**툴 이름이 `validate_vex` 인 것은 그대로 둔다.** 모델이 찾을 이름이 그쪽
+이기 때문이다. 대신 docstring 에서 받는 것이 VEXpression 임을 밝히고,
+`source` 모드로 순수 VEX 도 받는다.
 
 그래서 **번역기를 우리가 쓴다**(`snippet.py`). 스니펫을 이렇게 감싼다.
 
