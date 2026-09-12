@@ -166,7 +166,6 @@ def main() -> int:
     out["volume"] = {"count": volume["count"],
                      "is_sdf": volume["volumes"][0]["is_sdf"]}
 
-    run("export_geometry", path=bevel["path"], file_path=str(tmp / "wall.bgeo.sc"))
 
     # --- 실패 메시지가 다음에 무엇을 할지 알려 주는지 ----------------------
     try:

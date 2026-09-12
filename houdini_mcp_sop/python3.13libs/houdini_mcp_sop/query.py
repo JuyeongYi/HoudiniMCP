@@ -27,8 +27,6 @@ MAX_INTRINSICS = 60
 
 # saveToFile 이 확장자로 포맷을 정한다. 여기 없는 확장자도 Houdini 가 받을 수
 # 있지만, 모델이 무엇을 쓸 수 있는지 알려면 목록이 필요하다.
-GEOMETRY_FORMATS = (".bgeo.sc", ".bgeo", ".geo", ".obj", ".ply", ".vdb", ".abc", ".usd", ".fbx")
-
 
 def _point_entry(point: hou.Point, origin: Sequence[float]) -> dict[str, Any]:
     position = point.position()
@@ -295,42 +293,3 @@ def _volume_entry(prim: hou.Prim) -> dict[str, Any]:
     else:
         entry["storage"] = str(prim.storageType()).rsplit(".", 1)[-1]
     return entry
-
-
-@tool()
-def export_geometry(path: str, file_path: str) -> dict[str, Any]:
-    """지오메트리를 파일로 쓰고 경로를 돌려준다.
-
-    포맷은 확장자로 정해진다. 중간 결과를 디스크에 남기거나 다른 도구로 넘길 때
-    쓴다. 응답에는 파일 크기와 지오메트리 요약만 담는다.
-
-    Args:
-        path: SOP 노드 경로.
-        file_path: 저장할 경로. 확장자로 포맷이 정해진다.
-            .bgeo.sc(권장) / .bgeo / .geo / .obj / .ply / .vdb / .abc / .usd / .fbx
-    """
-    _, geo = geometry_at(path)
-    target = Path(file_path)
-    if not any(str(target).endswith(ext) for ext in GEOMETRY_FORMATS):
-        raise ValueError(
-            f"{target.name} 의 확장자로는 포맷을 정할 수 없습니다. "
-            f"쓸 수 있는 확장자: {', '.join(GEOMETRY_FORMATS)}"
-        )
-    target.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        geo.saveToFile(str(target))
-    except hou.Error as exc:
-        raise ValueError(
-            f"{target} 로 저장하지 못했습니다: {exc} "
-            f"디렉토리 권한과 확장자를 확인하세요."
-        ) from exc
-
-    return {
-        "path": path,
-        "file": str(target),
-        "bytes": target.stat().st_size,
-        "points": geo.pointCount(),
-        "prims": geo.primCount(),
-        "bbox": bbox_dict(geo.boundingBox()),
-    }

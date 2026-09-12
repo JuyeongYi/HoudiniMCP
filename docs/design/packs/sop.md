@@ -121,7 +121,11 @@ array = numpy.frombuffer(raw, dtype=numpy.float32).reshape(-1, 3)
 - `attrib_stats`: 성분별 min/max/mean/std, 분위수(p05~p95), 히스토그램.
   성분이 여럿이면 크기(L2) 통계도
 - `export_attribute`: 원본이 필요하면 `.npy` 로 쓰고 **경로를 돌려준다**
-- `export_geometry`: `.bgeo.sc` / `.obj` / `.vdb` / `.usd` 등으로 쓰고 경로 반환
+- ~~`export_geometry`~~: 만들지 않는다. 파일 쓰기는 `houdini_mcp_io` 가 맡는다.
+  `hou.Geometry.saveToFile` 은 `.abc` / `.usd` / `.fbx` 확장자를 받고도 예외 없이
+  옛 `PGEOMETRY V5` 를 쓴다(실측). 그 셋을 쓸 수 있다고 광고하면 모델이 조용히
+  깨진 파일을 만든다. `io.write_geometry` 가 그 확장자를 거부하고 쓴 파일을 다시
+  읽어 대조한다.
 - `sample_points` 는 base 에 이미 있다. 중복으로 만들지 않았다
 
 ### 4. 근접 질의는 Houdini 것이 다 있었다
@@ -174,7 +178,7 @@ Houdini 22.0.368 기준. **버전이 올라가면 다시 확인해야 한다.**
 | `attribs` | `attrib_stats`, `export_attribute`, `add_normals`, `create_attribute` |
 | `groups` | `create_group`, `group_members` |
 | `uv` | `uv_report`, `uv_project`, `auto_uv` |
-| `query` | `nearest_point`, `nearest_prim`, `ray_intersect`, `prim_intrinsics`, `volume_info`, `export_geometry` |
+| `query` | `nearest_point`, `nearest_prim`, `ray_intersect`, `prim_intrinsics`, `volume_info` |
 
 노드를 만드는 툴은 전부 `comment` 를 **기본값 없는 인자**로 받는다. 씬을 바꾸는
 툴은 전부 `@undoable("English Label")` 로 감쌌다.
