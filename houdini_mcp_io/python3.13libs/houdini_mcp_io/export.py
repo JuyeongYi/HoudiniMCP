@@ -240,7 +240,12 @@ def _references_op_path(value: Any) -> bool:
     Houdini 세션 안에서만 풀리는 경로다. 파일에 남으면 다른 도구가 열 때
     해석 불가 의존성이 된다.
     """
-    items = value if isinstance(value, (list, tuple)) else [value]
+    # pxr 는 asset[] 를 Vt 배열로 준다. list 도 tuple 도 아니므로 문자열이 아닌
+    # 모든 이터러블을 펼친다.
+    if isinstance(value, str) or not hasattr(value, "__iter__"):
+        items = [value]
+    else:
+        items = list(value)
     texts = [str(getattr(item, "path", item)) for item in items]
     return bool(texts) and all(text.startswith("op:") for text in texts)
 
@@ -269,12 +274,20 @@ def _author_stage_metadata(target: Path) -> dict[str, Any]:
 
     authored: list[str] = []
     layer = stage.GetRootLayer()
-    custom = dict(layer.customLayerData)
-    stripped = [key for key, value in custom.items() if _references_op_path(value)]
-    if stripped:
-        for key in stripped:
+
+    stripped: list[str] = []
+    for prim in stage.Traverse():
+        for key, value in (prim.GetCustomData() or {}).items():
+            if _references_op_path(value):
+                prim.ClearCustomDataByKey(key)
+                stripped.append(f"{prim.GetPath().pathString}.{key}")
+    for key, value in dict(layer.customLayerData).items():
+        if _references_op_path(value):
+            custom = dict(layer.customLayerData)
             del custom[key]
-        layer.customLayerData = custom
+            layer.customLayerData = custom
+            stripped.append(f"(layer).{key}")
+    if stripped:
         authored.append("stripped:" + ",".join(sorted(stripped)))
     if not stage.HasAuthoredMetadata("upAxis"):
         UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)

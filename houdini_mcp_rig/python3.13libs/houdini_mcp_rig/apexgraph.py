@@ -298,24 +298,21 @@ def apex_callback_info(name: str) -> dict[str, Any]:
     }
 
 
-def _parm_entry(parm: Any) -> dict[str, Any]:
-    """APEX_Parm 을 이름/타입으로 푼다.
+def _parm_entry(parm: apex.Parm) -> dict[str, Any]:
+    """`apex.Parm` 을 이름·타입으로 푼다.
 
-    `<APEX_Parm 'restlocal' Matrix4>` 처럼 repr 만 쓸 만한 객체라, 접근자가 있으면
-    쓰고 없으면 repr 을 갈라 쓴다.
+    이름 앞의 `*` 는 제자리(in place) 인자라는 표시다 — 같은 값이 입력이자
+    출력이다. 리그 그래프를 이을 때 그 포트는 따로 만들지 않는다.
     """
-    name = getattr(parm, "name", None)
-    type_name = getattr(parm, "type", None) or getattr(parm, "typeName", None)
-    if callable(name):
-        name = name()
-    if callable(type_name):
-        type_name = type_name()
-    if name is None:
-        text = str(parm).strip("<>").replace("APEX_Parm ", "", 1)
-        parts = text.rsplit(" ", 1)
-        name = parts[0].strip("'\"")
-        type_name = parts[1] if len(parts) > 1 else None
-    return {"name": str(name), "type": str(type_name) if type_name else None}
+    entry: dict[str, Any] = {
+        "name": str(parm.name),
+        "type": str(parm.type_name) or None,
+    }
+    try:
+        entry["in_place"] = bool(parm.isInplace())
+    except Exception:  # 구버전 시그니처에는 없을 수 있다
+        pass
+    return entry
 
 
 # --------------------------------------------------------------------------

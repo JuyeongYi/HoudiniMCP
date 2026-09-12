@@ -166,6 +166,34 @@ def main() -> int:
 
     out["noise_loop"] = run("check_loop", path=noise["path"])["loops"]
 
+    # limit 필터는 값을 잘라야 한다. 자른 뒤 범위가 실제로 좁아지는가.
+    clamped = run(
+        "apply_chop_filter",
+        path=noise["path"],
+        filter="limit",
+        comment="Clamp shake to a safe range",
+        name="clamp_shake",
+        parms={"type": 1, "min": -0.1, "max": 0.1},
+    )
+    out["limit"] = {
+        "range_before": clamped["comparison"][0]["range_before"],
+        "range_after": clamped["comparison"][0]["range_after"],
+    }
+
+    # strength 가 없는 필터에 strength 를 주면 무엇을 하라고 알려 줘야 한다.
+    try:
+        call["apply_chop_filter"](
+            path=noise["path"], filter="limit", comment="bad", strength=1.0
+        )
+        out["no_strength_message"] = ""
+    except Exception as exc:
+        out["no_strength_message"] = str(exc)
+    try:
+        call["apply_chop_filter"](path=noise["path"], filter="smoooth", comment="bad")
+        out["bad_filter_message"] = ""
+    except Exception as exc:
+        out["bad_filter_message"] = str(exc)
+
     # --- 정확히 한 주기인 사인파: 루프여야 한다 ---------------------------
     # 121 샘플, 24fps -> 5.0초. period 5 면 첫 샘플과 끝 샘플이 같은 위상이다.
     sine = run(
@@ -183,6 +211,20 @@ def main() -> int:
         "channel": sine_loop["channels"][0],
     }
 
+    # 톱니파는 첫 값과 끝 값이 둘 다 0 이라 **값만 보면 루프처럼 보인다.**
+    # 하지만 끝에서 1 -> 0 으로 떨어지므로 이어 붙이면 그 자리에서 튄다.
+    # 기울기 항이 실제로 일하는지 여기서 갈린다.
+    # (삼각파는 Houdini 에서 0 -> 1 -> -1 -> 0 이라 진짜로 이어진다 — 실측)
+    saw = run(
+        "create_chop_node",
+        parent=net_path,
+        node_type="wave",
+        comment="Sawtooth that pops at the seam",
+        name="sawtooth_seam",
+        parms={"channelname": "seam", "wavetype": 4, "period": 5.0, "amp": 1.0},
+    )
+    out["saw_loop"] = run("check_loop", path=saw["path"])["channels"][0]
+
     # --- 정지 채널: 전 구간이 정지여야 한다 -------------------------------
     still = run(
         "create_chop_node",
@@ -199,6 +241,20 @@ def main() -> int:
         "std": still_stats["channels"][0]["stats"]["std"],
         "fraction": still_stats["channels"][0]["still"]["sample_fraction"],
         "ranges": still_stats["channels"][0]["still"]["ranges"],
+    }
+
+    # --- 입력 여러 개: merge 로 두 채널을 합친다 ---------------------------
+    merged = run(
+        "create_chop_node",
+        parent=net_path,
+        node_type="merge",
+        comment="Combine shake and cycle",
+        name="combine_motion",
+        inputs=[noise["path"], sine["path"]],
+    )
+    out["merge"] = {
+        "channels": [ch["name"] for ch in merged["channels"]],
+        "channel_count": merged["channel_count"],
     }
 
     # --- 일부러 넣은 튐: find_spikes 가 그 프레임을 집어야 한다 ------------

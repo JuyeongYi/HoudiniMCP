@@ -70,10 +70,23 @@ SOP 을 USD 로 내보낼 때는 `/stage` 에 임시 `sopimport` LOP 을 만들�
 지운다. (초안이 물었던 "USD ROP 이름"은 LOP 카테고리의 `usd_rop` 이고,
 SOP 카테고리의 `usdexport` 는 ROP 이 아니라 USD 프림 설정 SOP 이다.)
 
+`sopimport` 에는 함정이 둘 더 있다.
+
+- **`$HIP/usd/<노드>.usd` 를 몰래 쓴다.** `enable_savepath` 가 기본으로 켜져
+  있어서, 임시 노드를 만들어 쿡하기만 해도 사용자 프로젝트 디렉토리에 파일이
+  생긴다. 검증 중에 저장소에 `usd/sopimport1.usdnc` 가 남아서 발견했다.
+  `enable_savepath` 를 꺼야 한다.
+- **`/HoudiniLayerInfo` 프림의 customData 에 `op:/obj/...` 경로를 남긴다**
+  (`HoudiniVolumeFilePaths`). Houdini 세션 안에서만 풀리는 경로라 `usdchecker`
+  가 `UnresolvableDependency` 로 잡는다. 지오메트리와 무관한 기록이므로
+  걷어낸다.
+
 `Usd.Stage.Export()` 는 **스테이지 메타데이터를 저자하지 않는다.** 그냥 두면
 `usdchecker` 가 `MissingUpAxisMetadata` / `MissingDefaultPrim` 을 낸다.
 `usd_rop` 의 `ensuremetricsset` / `defaultprim` 이 하던 일이므로, 쓴 뒤에 직접
 채워 넣는다.
+
+셋을 다 처리하면 `usdchecker` 가 `Success!` 를 낸다.
 
 ### 3. Apprentice 는 Alembic·FBX 내보내기가 **막혀 있다**
 
@@ -138,7 +151,9 @@ FBX 검증이 얕은 것은 의도적이다. FBX SDK 파이썬 바인딩이 번�
 
 ## 툴
 
-12개. 모듈 하나가 800줄을 넘지 않는다.
+12개. 모듈 크기는 `_common` 484 / `export` 765 / `deps` 492 / `load` 458 /
+`check` 134 줄이다. **`export` 가 800줄 경계에 가깝다** — 여기에 포맷을 더
+붙이게 되면 Alembic·FBX 를 `export_interchange` 로 떼는 것이 먼저다.
 
 | 모듈 | 툴 |
 |---|---|
@@ -189,7 +204,8 @@ box → write_geometry(.bgeo.sc) → 다시 읽어 8점 6프림 확인 ✓
 → .usd 로 → 거부하고 export_usd 로 안내 ✓
 → $F4 로 5프레임 → 5개 파일 전부 재독 검증 ✓
 → 포인트만 있는 지오메트리를 .stl 로 → verified=false, empty=true ✓ (일부러 깨뜨림)
-→ export_usd → pxr 재독, upAxis/defaultPrim 저자, usdchecker ✓
+→ export_usd → pxr 재독, upAxis/defaultPrim 저자, usdchecker Success ✓
+→ (부작용 없음 확인: $HIP/usd/ 사이드카가 생기지 않는다) ✓
 → 빈 SOP 을 export_usd → verified=false, empty=true ✓ (일부러 깨뜨림)
 → export_alembic / export_fbx → Apprentice 거절 메시지 ✓
 → 텍스처·없는 캐시 참조 → list_dependencies 가 종류별로 집계 ✓

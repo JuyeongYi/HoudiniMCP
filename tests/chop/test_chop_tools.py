@@ -159,6 +159,22 @@ class ChopToolsTest(unittest.TestCase):
         self.assertFalse(self.result["noise_loop"])
         self.assertFalse(self.result["noise_stats"]["loops"])
 
+    def test_loop_verdict_catches_a_slope_only_seam(self) -> None:
+        """톱니파는 첫 값과 끝 값이 둘 다 0 이라 값만 보면 루프로 보인다.
+
+        하지만 끝에서 1 -> 0 으로 떨어지므로 이어 붙이면 그 자리에서 튄다.
+        첫·끝 값만 비교하는 판정이라면 통과시켜 버리는 경우다 — 기울기 항이
+        실제로 일하는지를 여기서 못 박는다.
+        """
+        saw = self.result["saw_loop"]
+        self.assertTrue(saw["value_continuous"])
+        self.assertFalse(saw["slope_continuous"])
+        self.assertFalse(saw["loops"])
+        # 천천히 올라가다가 한 번에 떨어진다 — 부호가 반대여야 한다.
+        self.assertGreater(saw["slope_in"], 0.0)
+        self.assertLess(saw["slope_out"], 0.0)
+        self.assertIn("기울기", saw["reason"])
+
     def test_sine_is_not_a_constant(self) -> None:
         """루프 판정이 상수 채널로 통과해 버리면 시험이 되지 않는다."""
         self.assertGreater(self.result["sine"]["std"], 0.5)
@@ -177,6 +193,18 @@ class ChopToolsTest(unittest.TestCase):
         self.assertEqual(self.result["lag"]["type"], "lag")
         self.assertLess(comparison["std_after"], comparison["std_before"])
         self.assertLess(comparison["std_delta"], 0.0)
+
+    def test_limit_filter_clamps_the_range(self) -> None:
+        before = self.result["limit"]["range_before"]
+        after = self.result["limit"]["range_after"]
+        self.assertLess(before[0], -0.1)
+        self.assertGreaterEqual(after[0], -0.1 - 1e-6)
+        self.assertLessEqual(after[1], 0.1 + 1e-6)
+
+    def test_create_chop_node_wires_multiple_inputs(self) -> None:
+        merge = self.result["merge"]
+        self.assertEqual(merge["channel_count"], 2)
+        self.assertEqual(sorted(merge["channels"]), ["cycle", "shake"])
 
     def test_stats_report_sparkline_and_clean_data(self) -> None:
         stats = self.result["noise_stats"]
@@ -281,6 +309,13 @@ class ChopToolsTest(unittest.TestCase):
         message = self.result["wrong_format_message"]
         self.assertIn(".bclip", message)
         self.assertIn("export_parm_channels", message)
+
+    def test_filter_messages_list_what_is_usable(self) -> None:
+        """쓸 수 없는 값을 주면 쓸 수 있는 값을 알려 줘야 한다."""
+        self.assertIn("parms", self.result["no_strength_message"])
+        bad = self.result["bad_filter_message"]
+        self.assertIn("lag", bad)
+        self.assertIn("smooth", bad)
 
 
 if __name__ == "__main__":

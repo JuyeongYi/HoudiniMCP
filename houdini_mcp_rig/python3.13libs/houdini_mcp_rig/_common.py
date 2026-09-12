@@ -234,22 +234,6 @@ def point_ints(geo: hou.Geometry, name: str) -> numpy.ndarray:
 # --------------------------------------------------------------------------
 
 
-_PARENT_VEX = """
-// 폴리라인에서 부모 점을 찾는다. 한 프림 안에서 나보다 하나 앞에 있는 점이
-// 부모다. 파이썬 프림 루프 대신 VEX 로 돌려 C++ 쪽에서 처리한다.
-int parent = -1;
-foreach (int prim; pointprims(0, @ptnum)) {
-    int pts[] = primpoints(0, prim);
-    int slot = find(pts, @ptnum);
-    if (slot > 0) {
-        parent = pts[slot - 1];
-        break;
-    }
-}
-i@__rig_parent = parent;
-"""
-
-
 @dataclass(frozen=True)
 class Skeleton:
     """스켈레톤 지오메트리를 numpy 로 읽어 둔 것.
@@ -379,18 +363,31 @@ def read_skeleton(geo: hou.Geometry, path: str = "") -> Skeleton:
 
 
 def _derive_parents(geo: hou.Geometry) -> numpy.ndarray:
-    """폴리라인에서 부모 점 번호를 유도한다.
+    """폴리라인에서 부모 점 번호를 유도한다. 한 폴리라인 안에서 바로 앞 점이 부모다.
 
-    attribwrangle **verb** 로 VEX 를 독립 지오메트리에 돌린다. 노드를 만들지
-    않으므로 사용자의 네트워크가 더러워지지 않고, 프림 루프가 C++ 쪽에서 돈다.
+    여기만 파이썬 프림 루프를 돈다. 벌크 경로가 없어서다 — 지오메트리 인트린식에
+    정점-점 대응을 통째로 주는 것이 없고(실측), attribwrangle 은 서브넷이라
+    verb 가 없다(`nodeVerb("attribwrangle")` 이 None 이다).
+
+    그래도 문제가 되지 않는 이유는 **스켈레톤이 작기 때문**이다. 본 수는 조인트
+    수와 같아서 많아야 수백이다. 이 팩에서 실제로 커지는 데이터는 스킨 웨이트
+    (점 10만 개 x 영향 수)이고, 그쪽은 `read_capture` 가 전부 numpy 로 읽는다.
+
+    `parent_idx` 가 있는 스켈레톤(kinefx::rigdoctor 를 거친 것)은 이 경로로 아예
+    오지 않는다.
     """
-    if geo.pointCount() == 0:
-        return numpy.zeros(0, dtype=numpy.int32)
-    verb = hou.sopNodeTypeCategory().nodeVerb("attribwrangle")
-    verb.setParms({"class": 2, "snippet": _PARENT_VEX})  # class 2 = points
-    out = hou.Geometry()
-    verb.execute(out, [geo])
-    return point_ints(out, "__rig_parent").astype(numpy.int32)
+    count = geo.pointCount()
+    parents = numpy.full(count, -1, dtype=numpy.int32)
+    if count == 0:
+        return parents
+    for prim in geo.prims():
+        try:
+            points = prim.intrinsicValue("vertexpoints")
+        except hou.OperationFailed:
+            continue
+        for slot in range(1, len(points)):
+            parents[points[slot]] = points[slot - 1]
+    return parents
 
 
 def skeleton_at(path: str) -> tuple[hou.SopNode, hou.Geometry, Skeleton]:
