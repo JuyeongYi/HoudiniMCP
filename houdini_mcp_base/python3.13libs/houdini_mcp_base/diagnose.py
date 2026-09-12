@@ -159,7 +159,9 @@ def cook_status(path: str) -> dict[str, Any]:
     out: dict[str, Any] = {"path": node.path(), "type": node.type().name()}
     for key, attr in (
         ("cook_count", "cookCount"),
-        ("cook_time", "cookTime"),
+        # 걸린 시간은 lastCookTime() 이다. cookTime 은 이 HOM 에 없어서,
+        # 그 이름으로 찾으면 조용히 빠진 채 결과가 나간다(실측 확인).
+        ("cook_time", "lastCookTime"),
         ("time_dependent", "isTimeDependent"),
         ("bypassed", "isBypassed"),
         ("locked", "isHardLocked"),

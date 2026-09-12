@@ -393,6 +393,51 @@ def get_selection() -> dict[str, Any]:
 
 
 @tool()
+@undoable("Select by pattern")
+def select_by_pattern(
+    pattern: str = "*",
+    root: str = "/obj",
+    node_type: str | None = None,
+    clear_existing: bool = True,
+) -> dict[str, Any]:
+    """패턴이나 타입으로 골라서 한꺼번에 선택한다.
+
+    `set_selection` 은 경로를 하나씩 받는다. 그 앞에 `find_nodes` 를 부르는 일이
+    반복되므로 둘을 합쳤다. 작업 대상을 사용자에게 짚어 보여줄 때 쓴다.
+
+    무엇이 골라질지 미리 보고 싶으면 `find_nodes` 를 먼저 부른다 - 이 툴은 바로
+    선택까지 바꾼다.
+
+    Args:
+        pattern: 노드 이름 패턴. `*` 는 한 단계, `**` 는 재귀.
+            예: "*wall*", "**/*merlon*"
+        root: 검색을 시작할 네트워크 경로.
+        node_type: 타입으로 한 번 더 거른다. 예: box, copytopoints
+        clear_existing: 기존 선택을 지우고 새로 고른다.
+    """
+    matched = _require(root).glob(pattern)
+    if node_type:
+        # 버전 접미사(box::2.0)가 붙은 타입도 같은 것으로 본다.
+        matched = [n for n in matched if n.type().name().split("::", 1)[0] == node_type]
+
+    if clear_existing:
+        hou.clearAllSelected()
+    for node in matched:
+        node.setSelected(True)
+
+    return {
+        "pattern": pattern,
+        "root": root,
+        "node_type": node_type,
+        "count": len(matched),
+        "selected": [
+            {"path": n.path(), "type": n.type().name(), "comment": n.comment()}
+            for n in matched
+        ],
+    }
+
+
+@tool()
 @undoable("Set selection")
 def set_selection(paths: list[str], clear_existing: bool = True) -> dict[str, Any]:
     """네트워크 뷰의 선택을 바꾼다.
