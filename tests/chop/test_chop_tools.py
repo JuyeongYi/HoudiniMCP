@@ -266,4 +266,22 @@ class ChopToolsTest(unittest.TestCase):
         # 앞 절반은 무음, 뒤 절반은 톤. 포락선이 그것을 보여야 한다.
         self.assertEqual(audio["envelope_head"], [0.0, 0.0, 0.0, 0.0])
         for value in audio["envelope_tail"]:
-    
+            self.assertGreater(value, 0.5)
+        # 오디오 샘플레이트가 씬 FPS 와 달라 resample 안내가 붙어야 한다.
+        self.assertTrue(audio["has_hint"])
+
+    # ---- 실패가 다음에 무엇을 할지 알려 주는가 ----------------------------
+
+    def test_not_a_chop_message_says_what_to_do(self) -> None:
+        message = self.result["not_a_chop_message"]
+        self.assertIn("CHOP 이 아니라", message)
+        self.assertIn("create_chop_network", message)
+
+    def test_wrong_format_message_points_at_the_other_tool(self) -> None:
+        message = self.result["wrong_format_message"]
+        self.assertIn(".bclip", message)
+        self.assertIn("export_parm_channels", message)
+
+
+if __name__ == "__main__":
+    unittest.main()

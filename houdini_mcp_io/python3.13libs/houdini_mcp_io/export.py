@@ -216,6 +216,10 @@ def _usd_stage_of(node: hou.Node) -> tuple[Any, hou.Node | None, dict[str, Any]]
     importer = temp_node(stage_net, "sopimport", "USD 내보내기")
     try:
         importer.parm("soppath").set(sop.path())
+        # sopimport 는 기본적으로 SOP 지오메트리를 $HIP/usd/<노드>.usd 로 따로
+        # 흘려 쓴다(실측 확인). 임시 노드가 사용자 프로젝트에 파일을 남기면 안 되고,
+        # 우리는 스테이지를 통째로 Export 하므로 사이드카가 필요 없다.
+        importer.parm("enable_savepath").set(0)
         importer.cook(force=True)
         stage = importer.stage()
     except hou.Error as exc:
@@ -251,6 +255,11 @@ def _author_stage_metadata(target: Path) -> dict[str, Any]:
 
     Houdini 는 언제나 Y-up 이므로 upAxis 는 Y 다. defaultPrim 은 루트에 내용
     프림이 하나뿐일 때만 정한다 — 여럿이면 무엇을 고를지는 씬 작성자의 몫이다.
+
+    덤으로 `customLayerData` 에 남은 `op:/obj/...` 에셋 경로를 걷어낸다. Houdini
+    가 자기 기록용으로 넣는 것인데(`HoudiniVolumeFilePaths`), 이 세션 밖에서는
+    풀리지 않아 `usdchecker` 가 해석 불가 의존성으로 잡는다. 지오메트리와는
+    무관하다.
     """
     from pxr import Usd, UsdGeom
 
@@ -259,6 +268,14 @@ def _author_stage_metadata(target: Path) -> dict[str, Any]:
         return {"authored": []}
 
     authored: list[str] = []
+    layer = stage.GetRootLayer()
+    custom = dict(layer.customLayerData)
+    stripped = [key for key, value in custom.items() if _references_op_path(value)]
+    if stripped:
+        for key in stripped:
+            del custom[key]
+        layer.customLayerData = custom
+        authored.append("stripped:" + ",".join(sorted(stripped)))
     if not stage.HasAuthoredMetadata("upAxis"):
         UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
         authored.append("upAxis")
@@ -272,7 +289,7 @@ def _author_stage_metadata(target: Path) -> dict[str, Any]:
             stage.SetDefaultPrim(roots[0])
             authored.append("defaultPrim")
     if authored:
-        stage.GetRootLayer().Save()
+        layer.Save()
     return {"authored": authored}
 
 
