@@ -177,7 +177,17 @@ hython -c "from houdini_mcp import get_registry; print(len(get_registry()))"
 `houdini_mcp_base` 에 남은 결핍 86개는 팩이 아니라 base 확장이다.
 [base-gaps.md](base-gaps.md) 를 본다.
 
-### 범위 밖
+### 미결 항목
+
+구현하면서 드러난 것들이다. 팩 하나의 문제가 아니라 여러 팩에 걸쳐 있어
+따로 적어 둔다.
+
+| 문서 | 무엇 |
+|---|---|
+| [base-gaps.md](base-gaps.md) | base 에 있어야 하는데 없는 툴들 |
+| [path-handling.md](path-handling.md) | 경로 전개가 팩마다 따로 있다. 그리고 변수(`$HIP`)를 살려서 주고받아야 한다 |
+
+## 범위 밖
 
 의도적으로 만들지 않는 것들이다. 기존 구현에 있지만 우리 것이 아니다.
 
