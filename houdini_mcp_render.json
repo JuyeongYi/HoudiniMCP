@@ -1,0 +1,11 @@
+{
+    "requires": [
+        "houdini_mcp"
+    ],
+    "env": [
+        {
+            "HOUDINI_MCP_RENDER": "$HOUDINI_PACKAGE_PATH/houdini_mcp_render"
+        }
+    ],
+    "hpath": "$HOUDINI_MCP_RENDER"
+}
