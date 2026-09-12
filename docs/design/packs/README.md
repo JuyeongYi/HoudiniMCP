@@ -185,7 +185,7 @@ hython -c "from houdini_mcp import get_registry; print(len(get_registry()))"
 | 문서 | 무엇 |
 |---|---|
 | [base-gaps.md](base-gaps.md) | base 에 있어야 하는데 없는 툴들 |
-| [path-handling.md](path-handling.md) | 경로 전개가 팩마다 따로 있다. 그리고 변수(`$HIP`)를 살려서 주고받아야 한다 |
+| [path-handling.md](path-handling.md) | **핸드오프.** 경로 헬퍼를 base 로 올리고 다섯 팩에서 지운다. 그리고 변수(`$HIP`)를 살려서 주고받는다 |
 
 ## 범위 밖
 
