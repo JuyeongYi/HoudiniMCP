@@ -159,7 +159,7 @@ def test_simulation(
     if resolution_factor <= 0:
         raise ValueError(
             f"resolution_factor 는 양수여야 합니다: {resolution_factor}. "
-            f"해상도를 반으로 낮추려면 2.0 을 주세요."
+            "해상도를 반으로 낮추려면 2.0 을 주세요."
         )
 
     changed: list[dict[str, Any]] = []
@@ -245,13 +245,13 @@ def _next_steps(net: hou.Node, report: dict[str, Any], summary: dict[str, Any]) 
     if idle:
         steps.append(
             f"{', '.join(idle)} 에서 아무 일도 일어나지 않았습니다 — 움직이지도, "
-            f"요소 수가 변하지도, 필드가 채워지지도 않았습니다. 소스나 힘이 "
-            f"연결돼 있는지 확인하세요"
+            "요소 수가 변하지도, 필드가 채워지지도 않았습니다. 소스나 힘이 "
+            "연결돼 있는지 확인하세요"
         )
     if not steps:
         steps.append(
-            f"셋업이 동작합니다. resolution_factor=1 로 다시 돌려 실제 해상도의 "
-            f"비용을 재거나, 전체 프레임을 write_sim_cache 로 구우세요"
+            "셋업이 동작합니다. resolution_factor=1 로 다시 돌려 실제 해상도의 "
+            "비용을 재거나, 전체 프레임을 write_sim_cache 로 구우세요"
         )
     return steps
 

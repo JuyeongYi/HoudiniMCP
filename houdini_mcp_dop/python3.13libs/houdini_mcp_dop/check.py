@@ -70,8 +70,8 @@ def _check_chain(net: hou.Node, chain: list[hou.DopNode]) -> list[dict[str, Any]
             _issue(
                 "warning",
                 f"{node.name()} ({node.type().name()}) 가 출력으로 이어지지 않아 "
-                f"시뮬에 참여하지 않습니다.",
-                f"connect_nodes 로 체인에 물리거나, 필요 없으면 delete_node 하세요.",
+                "시뮬에 참여하지 않습니다.",
+                "connect_nodes 로 체인에 물리거나, 필요 없으면 delete_node 하세요.",
                 node.path(),
             )
         )
@@ -87,7 +87,7 @@ def _check_solvers(net: hou.Node, chain: list[hou.DopNode]) -> tuple[list[dict[s
                 "error",
                 "체인에 솔버가 하나도 없습니다. 오브젝트만 있으면 아무 일도 일어나지 않습니다.",
                 f"add_dop_object('{net.path()}', '<source>', 'rbdobject', ...) 로 "
-                f"오브젝트와 솔버를 함께 넣으세요.",
+                "오브젝트와 솔버를 함께 넣으세요.",
             )
         )
     for solver in solvers:
@@ -96,7 +96,7 @@ def _check_solvers(net: hou.Node, chain: list[hou.DopNode]) -> tuple[list[dict[s
                 _issue(
                     "error",
                     f"{solver.name()} 이 바이패스돼 있습니다. 이 솔버는 아무것도 풀지 않습니다.",
-                    f"set_flags 로 bypass 를 끄세요.",
+                    "set_flags 로 bypass 를 끄세요.",
                     solver.path(),
                 )
             )
@@ -105,7 +105,7 @@ def _check_solvers(net: hou.Node, chain: list[hou.DopNode]) -> tuple[list[dict[s
                 _issue(
                     "error",
                     f"{solver.name()} 에 오브젝트가 하나도 연결돼 있지 않습니다.",
-                    f"add_dop_object 로 오브젝트를 넣거나 connect_nodes 로 이으세요.",
+                    "add_dop_object 로 오브젝트를 넣거나 connect_nodes 로 이으세요.",
                     solver.path(),
                 )
             )
@@ -127,8 +127,8 @@ def _check_sources(chain: list[hou.DopNode]) -> list[dict[str, Any]]:
                         _issue(
                             "warning",
                             f"{node.name()} 의 {parm_name} 가 비어 있습니다. "
-                            f"이 오브젝트는 지오메트리 없이 시작합니다.",
-                            f"set_parms 로 소스 SOP 경로를 거세요.",
+                            "이 오브젝트는 지오메트리 없이 시작합니다.",
+                            "set_parms 로 소스 SOP 경로를 거세요.",
                             node.path(),
                         )
                     )
@@ -139,7 +139,7 @@ def _check_sources(chain: list[hou.DopNode]) -> list[dict[str, Any]]:
                     _issue(
                         "error",
                         f"{node.name()} 의 {parm_name} 가 없는 노드를 가리킵니다: {value}",
-                        f"set_parms 로 올바른 경로를 거세요. find_nodes 로 찾을 수 있습니다.",
+                        "set_parms 로 올바른 경로를 거세요. find_nodes 로 찾을 수 있습니다.",
                         node.path(),
                     )
                 )
@@ -169,7 +169,7 @@ def _check_source_geometry(node: hou.DopNode, parm_name: str, target: hou.Node) 
             _issue(
                 "error",
                 f"{node.name()} 의 소스 {target.path()} 가 비어 있습니다 "
-                f"(점 0, 프림 0). 시뮬에 들어갈 것이 없습니다.",
+                "(점 0, 프림 0). 시뮬에 들어갈 것이 없습니다.",
                 "소스 SOP 이 실제로 지오메트리를 내는지 geometry_stats 로 확인하세요.",
                 node.path(),
             )
@@ -194,10 +194,10 @@ def _check_colliders(net: hou.Node, solvers: list[hou.DopNode], chain: list[hou.
     return [
         _issue(
             "warning",
-            f"충돌체(staticobject)가 없습니다. "
+            "충돌체(staticobject)가 없습니다. "
             f"{', '.join(s.name() for s in needs)} 가 부딪힐 것이 없어 계속 떨어집니다.",
             f"add_dop_object('{net.path()}', '<ground /obj geo>', 'staticobject', ...) "
-            f"로 바닥을 넣으세요.",
+            "로 바닥을 넣으세요.",
         )
     ]
 
@@ -211,9 +211,9 @@ def _check_timing(net: hou.Node, solvers: list[hou.DopNode]) -> list[dict[str, A
             _issue(
                 "warning",
                 f"시뮬 시작 프레임({start})이 플레이바 시작({playbar[0]})보다 앞섭니다. "
-                f"플레이바를 스크럽해도 첫 프레임을 볼 수 없습니다.",
+                "플레이바를 스크럽해도 첫 프레임을 볼 수 없습니다.",
                 f"set_parms('{net.path()}', {{'startframe': {playbar[0]}}}) 또는 "
-                f"set_frame_range 로 맞추세요.",
+                "set_frame_range 로 맞추세요.",
             )
         )
     substeps = int(net.evalParm("substep"))
@@ -294,7 +294,7 @@ def validate_simulation(dopnet: str) -> dict[str, Any]:
     else:
         next_steps.append(
             f"셋업에 빠진 것이 없습니다. test_simulation('{net.path()}', 1, 10) 으로 "
-            f"저해상도 시험 주행을 하세요."
+            "저해상도 시험 주행을 하세요."
         )
 
     return {
