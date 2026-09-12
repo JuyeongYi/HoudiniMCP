@@ -296,7 +296,7 @@ def main() -> int:
     }
 
     # --- CHOP -> 파라미터 -------------------------------------------------
-    target = hou.node("/obj").createNode("geo", node_name="bake_target")
+    hou.node("/obj").createNode("geo", node_name="bake_target")
     baked = run(
         "export_to_keyframes",
         path=sine["path"],
