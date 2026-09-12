@@ -381,12 +381,9 @@ def _derive_parents(geo: hou.Geometry) -> numpy.ndarray:
     if count == 0:
         return parents
     for prim in geo.prims():
-        try:
-            points = prim.intrinsicValue("vertexpoints")
-        except hou.OperationFailed:
-            continue
+        points = prim.points()
         for slot in range(1, len(points)):
-            parents[points[slot]] = points[slot - 1]
+            parents[points[slot].number()] = points[slot - 1].number()
     return parents
 
 
