@@ -272,3 +272,142 @@ def _apply_parms(node: hou.Node, parms: dict[str, ParmValue]) -> list[str]:
         parm.set(value)
         applied.append(name)
     return applied
+
+
+@tool()
+@undoable("Copy node")
+def copy_node(path: str, parent: str | None = None, name: str | None = None) -> dict[str, Any]:
+    """노드를 복제한다. 파라미터와 내부 네트워크까지 함께 복사된다.
+
+    Args:
+        path: 복사할 노드 경로.
+        parent: 붙여 넣을 네트워크. 생략하면 원본과 같은 부모.
+        name: 새 이름. 생략하면 Houdini 가 정한다.
+    """
+    source = _require(path)
+    target = _require(parent) if parent else source.parent()
+    if target is None:
+        raise ValueError(f"{path} 의 부모를 찾지 못했습니다. parent 를 지정하세요.")
+
+    copies = target.copyItems([source])
+    if not copies:
+        raise ValueError(f"{path} 를 복사하지 못했습니다.")
+    copy = copies[0]
+    if name:
+        copy.setName(name, unique_name=True)
+    return {"source": source.path(), "path": copy.path(), "name": copy.name()}
+
+
+@tool()
+@undoable("Reorder inputs")
+def reorder_inputs(path: str, order: list[int]) -> dict[str, Any]:
+    """노드의 입력 순서를 바꾼다.
+
+    merge 처럼 입력 순서가 결과에 영향을 주는 노드에서 쓴다. order 는 새 순서로
+    나열한 현재 입력 번호다. 예를 들어 [1, 0, 2] 는 앞의 두 입력을 맞바꾼다.
+
+    Args:
+        path: 노드 경로.
+        order: 새 순서. 현재 입력 번호를 원하는 순서대로.
+    """
+    node = _require(path)
+    current = list(node.inputs())
+    if sorted(order) != list(range(len(current))):
+        raise ValueError(
+            f"order 는 0..{len(current) - 1} 을 한 번씩 써야 합니다. 받은 값: {order}"
+        )
+
+    rearranged = [current[i] for i in order]
+    # 전부 끊고 새 순서로 다시 꽂는다. merge 처럼 입력이 가변인 노드는 중간을
+    # 끊으면 뒤가 당겨지므로, 부분 교체가 아니라 통째로 다시 배선해야 한다.
+    for index in range(len(current)):
+        node.setInput(index, None)
+    for index, source in enumerate(rearranged):
+        if source is not None:
+            node.setInput(index, source)
+    return {
+        "path": node.path(),
+        "inputs": [n.path() if n else None for n in node.inputs()],
+    }
+
+
+@tool()
+@undoable("Set node appearance")
+def set_node_appearance(
+    path: str,
+    color: list[float] | None = None,
+    position: list[float] | None = None,
+    shape: str | None = None,
+) -> dict[str, Any]:
+    """네트워크 뷰에서의 노드 색·위치·모양을 정한다.
+
+    그래프를 사람이 읽기 쉽게 정리할 때 쓴다. 결과 지오메트리에는 영향이 없다.
+
+    Args:
+        path: 노드 경로.
+        color: RGB 0~1 세 값. 예: [0.9, 0.3, 0.3]
+        position: 네트워크 뷰 좌표 두 값. 예: [3.0, -2.0]
+        shape: 노드 모양 이름. 예: circle, oval, box
+    """
+    node = _require(path)
+    changed: dict[str, Any] = {}
+
+    if color is not None:
+        if len(color) != 3 or not all(0.0 <= c <= 1.0 for c in color):
+            raise ValueError(f"color 는 0~1 사이 RGB 세 값이어야 합니다: {color}")
+        node.setColor(hou.Color(tuple(color)))
+        changed["color"] = list(color)
+
+    if position is not None:
+        if len(position) != 2:
+            raise ValueError(f"position 은 두 값이어야 합니다: {position}")
+        node.setPosition(hou.Vector2(tuple(position)))
+        changed["position"] = list(position)
+
+    if shape is not None:
+        try:
+            node.setUserData("nodeshape", shape)
+        except hou.OperationFailed as exc:
+            raise ValueError(f"모양을 바꾸지 못했습니다: {shape} ({exc})") from exc
+        changed["shape"] = shape
+
+    if not changed:
+        raise ValueError("color, position, shape 중 적어도 하나는 줘야 합니다.")
+    return {"path": node.path(), **changed}
+
+
+@tool()
+def get_selection() -> dict[str, Any]:
+    """지금 사용자가 네트워크 뷰에서 고른 노드들.
+
+    "이거 고쳐 줘" 처럼 대상이 생략된 요청을 받을 때 무엇을 가리키는지 확인한다.
+    """
+    selected = hou.selectedNodes()
+    return {
+        "count": len(selected),
+        "nodes": [
+            {"path": n.path(), "type": n.type().name(), "comment": n.comment()}
+            for n in selected
+        ],
+    }
+
+
+@tool()
+@undoable("Set selection")
+def set_selection(paths: list[str], clear_existing: bool = True) -> dict[str, Any]:
+    """네트워크 뷰의 선택을 바꾼다.
+
+    작업한 노드를 사용자에게 짚어 보여줄 때 쓴다.
+
+    Args:
+        paths: 고를 노드 경로들.
+        clear_existing: 기존 선택을 지우고 새로 고른다.
+    """
+    if clear_existing:
+        hou.clearAllSelected()
+    chosen = []
+    for path in paths:
+        node = _require(path)
+        node.setSelected(True)
+        chosen.append(node.path())
+    return {"selected": chosen, "count": len(chosen)}

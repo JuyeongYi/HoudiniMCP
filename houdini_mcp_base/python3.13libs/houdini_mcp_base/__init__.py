@@ -9,6 +9,11 @@
     geometry   지오메트리 통계·어트리뷰트 - SOP 뿐 아니라 DOP 등에서도 필요하다
     viewport   뷰포트 캡처와 프레이밍 - 만든 결과를 눈으로 확인한다
     visualize  어트리뷰트 비주얼라이저 - 값이 어떻게 퍼져 있는지 색으로 본다
+    nodetypes  노드 타입 카탈로그 - 무엇을 만들 수 있는지 먼저 본다
+    scene      씬 파일 저장·열기, 프레임 범위
+    diagnose   에러·경고 조회와 쿡 - 무엇이 잘못됐는지 알아낸다
+    anim       파라미터 식과 키프레임
+    execute    툴로 안 되는 일을 하는 탈출구. 마지막 수단이다
 
 특정 컨텍스트에만 의미가 있는 툴은 전용 팩(houdini_mcp_sop 등)으로 분리한다.
 
@@ -24,4 +29,9 @@ TOOL_MODULES = (
     "geometry",
     "viewport",
     "visualize",
+    "nodetypes",
+    "scene",
+    "diagnose",
+    "anim",
+    "execute",
 )
