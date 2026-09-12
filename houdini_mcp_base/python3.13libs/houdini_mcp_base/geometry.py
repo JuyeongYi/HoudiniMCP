@@ -53,6 +53,90 @@ def _bbox_dict(bbox: hou.BoundingBox) -> dict[str, list[float]]:
     }
 
 
+PRIM_TYPES = tuple(
+    (name, getattr(hou.primType, name))
+    for name in dir(hou.primType)
+    if not name.startswith("_") and name != "thisown"
+)
+"""hou.primType 의 멤버 전부. countPrimType 이 받지 않는 것은 호출 때 걸러진다."""
+
+_COUNTS = {
+    "point": "pointCount",
+    "prim": "primCount",
+    "vertex": "vertexCount",
+}
+
+_BULK = {
+    (hou.attribData.Float, "point"): "pointFloatAttribValues",
+    (hou.attribData.Int, "point"): "pointIntAttribValues",
+    (hou.attribData.String, "point"): "pointStringAttribValues",
+    (hou.attribData.Float, "prim"): "primFloatAttribValues",
+    (hou.attribData.Int, "prim"): "primIntAttribValues",
+    (hou.attribData.String, "prim"): "primStringAttribValues",
+    (hou.attribData.Float, "vertex"): "vertexFloatAttribValues",
+    (hou.attribData.Int, "vertex"): "vertexIntAttribValues",
+    (hou.attribData.String, "vertex"): "vertexStringAttribValues",
+}
+
+
+def _attribs_of(geo: hou.Geometry, owner: str):
+    """에러 메시지에서 "있는 것" 을 보여 주려고 쓴다."""
+    return {
+        "point": geo.pointAttribs,
+        "prim": geo.primAttribs,
+        "vertex": geo.vertexAttribs,
+        "detail": geo.globalAttribs,
+    }[owner]()
+
+
+def _element_count(geo: hou.Geometry, owner: str) -> int:
+    """요소 수. points() 를 만들지 않고 센다 - 점 10만 개에서 차이가 크다."""
+    return getattr(geo, _COUNTS[owner])()
+
+
+def _prim_type_counts(geo: hou.Geometry) -> dict[str, int]:
+    """프리미티브 종류별 개수.
+
+    countPrimType 은 C++ 에서 세므로 프리미티브 수와 무관하게 일정하다.
+    파이썬으로 prims() 를 돌면 프림 수에 비례한다(실측: 6,144 프림에서
+    11.7ms 대 0.3ms).
+    """
+    counts: dict[str, int] = {}
+    for name, value in PRIM_TYPES:
+        try:
+            total = geo.countPrimType(value)
+        except TypeError:
+            # Unknown 처럼 셀 수 없는 멤버가 섞여 있다.
+            continue
+        if total:
+            counts[name] = total
+    return counts
+
+
+def _bulk_values(
+    geo: hou.Geometry, owner: str, attrib: hou.Attrib, start: int, count: int
+) -> tuple[int, list[Any]]:
+    """어트리뷰트 값을 벌크로 읽어 (전체 개수, 잘라낸 값들) 을 돌려준다.
+
+    요소 하나씩 attribValue 를 부르지 않는다. 평평한 배열을 한 번에 받아
+    성분 수(size)로 묶는다.
+    """
+    getter = _BULK.get((attrib.dataType(), owner))
+    if getter is None:
+        raise ValueError(
+            f"{owner} 어트리뷰트 {attrib.name()!r} 는 {attrib.dataType()} 타입이라 "
+            f"벌크로 읽을 수 없습니다. run_python 으로 직접 읽으세요."
+        )
+
+    flat = getattr(geo, getter)(attrib.name())
+    size = attrib.size()
+    total = _element_count(geo, owner)
+    chunk = flat[start * size : (start + count) * size]
+    if size == 1:
+        return total, list(chunk)
+    return total, [list(chunk[i : i + size]) for i in range(0, len(chunk), size)]
+
+
 @tool()
 def geometry_stats(path: str) -> dict[str, Any]:
     """SOP 의 포인트·프리미티브·버텍스 수와 바운딩 박스.
@@ -63,18 +147,12 @@ def geometry_stats(path: str) -> dict[str, Any]:
         path: SOP 노드 경로. 예: /obj/castle/castle_wall
     """
     geo = _geometry(path)
-
-    prim_types: dict[str, int] = {}
-    for prim in geo.prims():
-        name = prim.type().name()
-        prim_types[name] = prim_types.get(name, 0) + 1
-
     return {
         "path": path,
-        "points": len(geo.points()),
-        "prims": len(geo.prims()),
-        "vertices": sum(len(prim.vertices()) for prim in geo.prims()),
-        "prim_types": prim_types,
+        "points": geo.pointCount(),
+        "prims": geo.primCount(),
+        "vertices": geo.vertexCount(),
+        "prim_types": _prim_type_counts(geo),
         "bbox": _bbox_dict(geo.boundingBox()),
     }
 
@@ -142,19 +220,20 @@ def sample_points(path: str, count: int = 10, start: int = 0) -> dict[str, Any]:
         raise ValueError(f"count 는 {MAX_SAMPLE} 이하여야 합니다: {count}")
 
     geo = _geometry(path)
-    points = geo.points()
-    total = len(points)
+    total = geo.pointCount()
     if start < 0 or (total and start >= total):
         raise ValueError(f"start 가 범위를 벗어났습니다: {start} (포인트 {total}개)")
 
-    chosen = points[start : start + count]
+    # points() 로 Point 객체를 전부 만들지 않는다. P 만 평평하게 받아 자른다.
+    flat = geo.pointFloatAttribValues("P")
+    chunk = flat[start * 3 : (start + count) * 3]
     return {
         "path": path,
         "total": total,
         "start": start,
         "points": [
-            {"number": p.number(), "P": [p.position()[0], p.position()[1], p.position()[2]]}
-            for p in chosen
+            {"number": start + i, "P": list(chunk[i * 3 : i * 3 + 3])}
+            for i in range(len(chunk) // 3)
         ],
     }
 
@@ -168,7 +247,7 @@ def attribute_values(
     Args:
         path: SOP 노드 경로.
         name: 어트리뷰트 이름. 예: P, Cd, name
-        owner: point / prim / vertex / detail 중 하나.
+        owner: point / prim / vertex / detail 중 하나. UV 는 보통 vertex 다.
         count: 읽을 개수. 최대 200. detail 은 하나뿐이라 무시된다.
         start: 몇 번째부터 읽을지.
     """
@@ -176,31 +255,36 @@ def attribute_values(
         raise ValueError(f"count 는 1 이상 {MAX_SAMPLE} 이하여야 합니다: {count}")
 
     geo = _geometry(path)
-    owners = {
-        "point": (geo.points, geo.findPointAttrib),
-        "prim": (geo.prims, geo.findPrimAttrib),
-        "vertex": (None, geo.findVertexAttrib),
-        "detail": (None, geo.findGlobalAttrib),
+    finders = {
+        "point": geo.findPointAttrib,
+        "prim": geo.findPrimAttrib,
+        "vertex": geo.findVertexAttrib,
+        "detail": geo.findGlobalAttrib,
     }
-    if owner not in owners:
-        raise ValueError(f"owner 는 {', '.join(owners)} 중 하나여야 합니다: {owner!r}")
+    if owner not in finders:
+        raise ValueError(f"owner 는 {', '.join(finders)} 중 하나여야 합니다: {owner!r}")
 
-    elements_fn, find = owners[owner]
-    if find(name) is None:
-        raise ValueError(f"{path} 에 {owner} 어트리뷰트 {name!r} 가 없습니다.")
+    attrib = finders[owner](name)
+    if attrib is None:
+        have = [a.name() for a in _attribs_of(geo, owner)]
+        raise ValueError(
+            f"{path} 에 {owner} 어트리뷰트 {name!r} 가 없습니다. "
+            f"있는 것: {', '.join(have) if have else '없음'}"
+        )
 
     if owner == "detail":
         return {"path": path, "name": name, "owner": owner, "value": geo.attribValue(name)}
-    if elements_fn is None:
-        raise ValueError("vertex 어트리뷰트 읽기는 아직 지원하지 않습니다.")
 
-    elements = elements_fn()
-    chosen = elements[start : start + count]
+    if start < 0:
+        raise ValueError(f"start 는 0 이상이어야 합니다: {start}")
+
+    total, values = _bulk_values(geo, owner, attrib, start, count)
     return {
         "path": path,
         "name": name,
         "owner": owner,
-        "total": len(elements),
+        "size": attrib.size(),
+        "total": total,
         "start": start,
-        "values": [element.attribValue(name) for element in chosen],
+        "values": values,
     }
