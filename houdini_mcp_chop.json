@@ -1,0 +1,12 @@
+{
+    "requires": [
+        "houdini_mcp",
+        "houdini_mcp_base"
+    ],
+    "env": [
+        {
+            "HOUDINI_MCP_CHOP": "$HOUDINI_PACKAGE_PATH/houdini_mcp_chop"
+        }
+    ],
+    "hpath": "$HOUDINI_MCP_CHOP"
+}
