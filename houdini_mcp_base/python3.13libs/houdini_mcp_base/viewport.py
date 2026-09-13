@@ -71,42 +71,128 @@ def viewport_snapshot(
         )
 
     viewer = _scene_viewer()
-    viewport = viewer.curViewport()
     at_frame = hou.frame() if frame is None else float(frame)
-
     with tempfile.TemporaryDirectory(prefix="hmcp_snap_") as tmp:
-        output = Path(tmp) / "snapshot.png"
-
-        settings = viewer.flipbookSettings().stash()
-        settings.frameRange([at_frame, at_frame])
-        settings.outputToMPlay(False)
-        settings.useResolution(True)
-        settings.resolution((width, height))
-        settings.output(str(output))
-        settings.cropOutMaskOverlay(crop_to_camera)
-        # 뷰포트는 선형이 아니라 보정된 색으로 보이므로 감마를 맞춰 준다.
-        settings.overrideGamma(2.2)
-
-        # 격자와 기준면은 결과 판단에 방해가 되므로 잠시 감춘다.
-        reference = viewer.referencePlane()
-        construction = viewer.constructionPlane()
-        was_reference = reference.isVisible()
-        was_construction = construction.isVisible()
-        reference.setIsVisible(False)
-        construction.setIsVisible(False)
-        try:
-            viewer.flipbook(viewport=viewport, settings=settings)
-        finally:
-            reference.setIsVisible(was_reference)
-            construction.setIsVisible(was_construction)
-
-        written = _find_output(output)
-        if written is None:
-            raise RuntimeError(
-                "캡처 파일이 만들어지지 않았습니다. 뷰포트가 그릴 수 있는 상태인지 "
-                "확인하세요."
-            )
+        written = _flipbook_frame(viewer, at_frame, width, height, Path(tmp), crop_to_camera)
         return image_result(written.read_bytes(), "png")
+
+
+MAX_SEQUENCE_FRAMES = 16
+"""한 장에 모을 수 있는 프레임 수. 칸이 작아지면 읽을 수 없다."""
+
+
+@tool()
+def viewport_sequence(
+    frames: list[float],
+    columns: int = 4,
+    tile_width: int = 480,
+    tile_height: int = 270,
+) -> Any:
+    """여러 프레임을 한 장에 모아 캡처한다. 시간에 따라 무엇이 일어나는지 볼 때.
+
+    시뮬레이션처럼 프레임마다 달라지는 결과는 한 프레임으로 판단할 수 없다 -
+    부딪히기 전부터 무너지고 있는지 같은 것은 여러 프레임을 나란히 봐야 보인다.
+    칸마다 왼쪽 위에 프레임 번호를 적는다. 끝나면 사용자의 현재 프레임으로
+    되돌린다.
+
+    시뮬레이션은 앞 프레임부터 차례로 계산되므로, 뒤 프레임을 처음 캡처할 때는
+    그만큼 오래 걸린다.
+
+    Args:
+        frames: 캡처할 프레임들. 최대 16개. 예: [1, 12, 20, 24, 36, 48]
+        columns: 한 줄에 놓을 칸 수.
+        tile_width: 칸 하나의 가로 픽셀.
+        tile_height: 칸 하나의 세로 픽셀.
+    """
+    if not frames:
+        raise ValueError("frames 가 비어 있습니다. 예: [1, 12, 24, 48]")
+    if len(frames) > MAX_SEQUENCE_FRAMES:
+        raise ValueError(
+            f"프레임이 {len(frames)}개입니다. 최대 {MAX_SEQUENCE_FRAMES}개까지 한 장에 "
+            f"모읍니다. 간격을 넓혀 고르세요."
+        )
+    if columns < 1:
+        raise ValueError(f"columns 는 1 이상이어야 합니다: {columns}")
+    rows = -(-len(frames) // columns)
+    sheet_w, sheet_h = tile_width * min(columns, len(frames)), tile_height * rows
+    if min(tile_width, tile_height) < 16 or max(sheet_w, sheet_h) > MAX_SIDE:
+        raise ValueError(
+            f"칸 {tile_width}x{tile_height} 로는 전체가 {sheet_w}x{sheet_h} 입니다. "
+            f"칸은 16 이상, 전체 한 변은 {MAX_SIDE} 이하가 되게 주세요."
+        )
+
+    import OpenImageIO as oiio
+
+    viewer = _scene_viewer()
+    original = hou.frame()
+    sheet = oiio.ImageBuf(oiio.ImageSpec(sheet_w, sheet_h, 3, "uint8"))
+    try:
+        with tempfile.TemporaryDirectory(prefix="hmcp_seq_") as tmp:
+            for index, frame in enumerate(frames):
+                tile_dir = Path(tmp) / f"tile{index}"
+                tile_dir.mkdir()
+                written = _flipbook_frame(
+                    viewer, float(frame), tile_width, tile_height, tile_dir
+                )
+                tile = oiio.ImageBuf(str(written))
+                if tile.spec().nchannels > 3:
+                    tile = oiio.ImageBufAlgo.channels(tile, (0, 1, 2))
+                # 흰 바탕에서도 읽히게 검은 글자에 흰 그림자를 깐다.
+                label = f"F {frame:g}"
+                oiio.ImageBufAlgo.render_text(tile, 9, 29, label, 22, "", (1.0, 1.0, 1.0))
+                oiio.ImageBufAlgo.render_text(tile, 8, 28, label, 22, "", (0.0, 0.0, 0.0))
+                col, row = index % columns, index // columns
+                oiio.ImageBufAlgo.paste(sheet, col * tile_width, row * tile_height, 0, 0, tile)
+            output = Path(tmp) / "sequence.png"
+            if not sheet.write(str(output)):
+                raise RuntimeError(f"모은 이미지를 쓰지 못했습니다: {sheet.geterror()}")
+            data = output.read_bytes()
+    finally:
+        hou.setFrame(original)
+    return image_result(data, "png")
+
+
+def _flipbook_frame(
+    viewer: hou.SceneViewer,
+    frame: float,
+    width: int,
+    height: int,
+    directory: Path,
+    crop_to_camera: bool = False,
+) -> Path:
+    """한 프레임을 flipbook 으로 PNG 에 쓰고, 실제로 쓰인 파일을 돌려준다."""
+    output = directory / "snapshot.png"
+
+    settings = viewer.flipbookSettings().stash()
+    settings.frameRange([frame, frame])
+    settings.outputToMPlay(False)
+    settings.useResolution(True)
+    settings.resolution((width, height))
+    settings.output(str(output))
+    settings.cropOutMaskOverlay(crop_to_camera)
+    # 뷰포트는 선형이 아니라 보정된 색으로 보이므로 감마를 맞춰 준다.
+    settings.overrideGamma(2.2)
+
+    # 격자와 기준면은 결과 판단에 방해가 되므로 잠시 감춘다.
+    reference = viewer.referencePlane()
+    construction = viewer.constructionPlane()
+    was_reference = reference.isVisible()
+    was_construction = construction.isVisible()
+    reference.setIsVisible(False)
+    construction.setIsVisible(False)
+    try:
+        viewer.flipbook(viewport=viewer.curViewport(), settings=settings)
+    finally:
+        reference.setIsVisible(was_reference)
+        construction.setIsVisible(was_construction)
+
+    written = _find_output(output)
+    if written is None:
+        raise RuntimeError(
+            "캡처 파일이 만들어지지 않았습니다. 뷰포트가 그릴 수 있는 상태인지 "
+            "확인하세요."
+        )
+    return written
 
 
 def _find_output(expected: Path) -> Path | None:

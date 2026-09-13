@@ -21,8 +21,12 @@ MAX_SAMPLE = 200
 """한 번에 돌려줄 포인트 수 상한. 더 많으면 응답만 무거워지고 읽히지 않는다."""
 
 
-def _geometry(path: str) -> hou.Geometry:
-    """SOP 노드의 지오메트리를 얻는다."""
+def _geometry(path: str, output: int = 0) -> hou.Geometry:
+    """노드의 지오메트리를 얻는다. output 으로 몇 번째 출력 포트인지 고른다.
+
+    출력이 여럿인 노드가 있다 - RBD Bullet Solver 는 1번이 제약, Voronoi
+    Fracture 는 1번이 제약 지오메트리다. 0번만 읽으면 그쪽은 볼 수 없다.
+    """
     node = hou.node(path)
     if node is None:
         raise ValueError(f"그런 노드가 없습니다: {path}")
@@ -33,7 +37,16 @@ def _geometry(path: str) -> hou.Geometry:
             f"{path} 에는 지오메트리가 없습니다. SOP 경로를 주세요. "
             f"(이 노드는 {node.type().category().name()} 입니다)"
         )
-    geo = getter()
+    if output:
+        labels = list(node.outputLabels()) if hasattr(node, "outputLabels") else []
+        if output < 0 or (labels and output >= len(labels)):
+            listed = ", ".join(f"{i}={name}" for i, name in enumerate(labels)) or "없음"
+            raise ValueError(
+                f"{path} 에는 {output}번 출력이 없습니다. 출력 포트: {listed}"
+            )
+        geo = getter(output)
+    else:
+        geo = getter()
     if geo is None:
         raise ValueError(
             f"{path} 의 지오메트리를 읽지 못했습니다. 노드가 쿡되지 않았을 수 있습니다."
@@ -138,15 +151,16 @@ def _bulk_values(
 
 
 @tool()
-def geometry_stats(path: str) -> dict[str, Any]:
+def geometry_stats(path: str, output: int = 0) -> dict[str, Any]:
     """SOP 의 포인트·프리미티브·버텍스 수와 바운딩 박스.
 
     만든 것이 의도한 크기·개수인지 확인할 때 쓴다.
 
     Args:
         path: SOP 노드 경로. 예: /obj/castle/castle_wall
+        output: 읽을 출력 포트 번호. 기본 0. 출력이 여럿인 노드(RBD 솔버의 제약은 1)에서 쓴다.
     """
-    geo = _geometry(path)
+    geo = _geometry(path, output)
     return {
         "path": path,
         "points": geo.pointCount(),
@@ -158,13 +172,14 @@ def geometry_stats(path: str) -> dict[str, Any]:
 
 
 @tool()
-def list_attributes(path: str) -> dict[str, list[dict[str, Any]]]:
+def list_attributes(path: str, output: int = 0) -> dict[str, list[dict[str, Any]]]:
     """지오메트리의 어트리뷰트를 종류별로 나열한다.
 
     Args:
         path: SOP 노드 경로.
+        output: 읽을 출력 포트 번호. 기본 0. 출력이 여럿인 노드(RBD 솔버의 제약은 1)에서 쓴다.
     """
-    geo = _geometry(path)
+    geo = _geometry(path, output)
 
     def describe(attribs) -> list[dict[str, Any]]:
         out = []
@@ -189,13 +204,14 @@ def list_attributes(path: str) -> dict[str, list[dict[str, Any]]]:
 
 
 @tool()
-def list_groups(path: str) -> dict[str, list[dict[str, Any]]]:
+def list_groups(path: str, output: int = 0) -> dict[str, list[dict[str, Any]]]:
     """지오메트리의 그룹을 종류별로 나열한다.
 
     Args:
         path: SOP 노드 경로.
+        output: 읽을 출력 포트 번호. 기본 0. 출력이 여럿인 노드(RBD 솔버의 제약은 1)에서 쓴다.
     """
-    geo = _geometry(path)
+    geo = _geometry(path, output)
     return {
         "point": [{"name": g.name(), "count": len(g.points())} for g in geo.pointGroups()],
         "prim": [{"name": g.name(), "count": len(g.prims())} for g in geo.primGroups()],
@@ -204,13 +220,16 @@ def list_groups(path: str) -> dict[str, list[dict[str, Any]]]:
 
 
 @tool()
-def sample_points(path: str, count: int = 10, start: int = 0) -> dict[str, Any]:
+def sample_points(
+    path: str, count: int = 10, start: int = 0, output: int = 0
+) -> dict[str, Any]:
     """포인트 좌표를 몇 개 뽑아 본다.
 
     통계만으로는 알 수 없는 배치를 확인할 때 쓴다.
 
     Args:
         path: SOP 노드 경로.
+        output: 읽을 출력 포트 번호. 기본 0. 출력이 여럿인 노드(RBD 솔버의 제약은 1)에서 쓴다.
         count: 뽑을 개수. 최대 200.
         start: 몇 번째 포인트부터 뽑을지.
     """
@@ -219,7 +238,7 @@ def sample_points(path: str, count: int = 10, start: int = 0) -> dict[str, Any]:
     if count > MAX_SAMPLE:
         raise ValueError(f"count 는 {MAX_SAMPLE} 이하여야 합니다: {count}")
 
-    geo = _geometry(path)
+    geo = _geometry(path, output)
     total = geo.pointCount()
     if start < 0 or (total and start >= total):
         raise ValueError(f"start 가 범위를 벗어났습니다: {start} (포인트 {total}개)")
@@ -240,12 +259,18 @@ def sample_points(path: str, count: int = 10, start: int = 0) -> dict[str, Any]:
 
 @tool()
 def attribute_values(
-    path: str, name: str, owner: str = "point", count: int = 10, start: int = 0
+    path: str,
+    name: str,
+    owner: str = "point",
+    count: int = 10,
+    start: int = 0,
+    output: int = 0,
 ) -> dict[str, Any]:
     """어트리뷰트 값을 몇 개 읽어 본다.
 
     Args:
         path: SOP 노드 경로.
+        output: 읽을 출력 포트 번호. 기본 0. 출력이 여럿인 노드(RBD 솔버의 제약은 1)에서 쓴다.
         name: 어트리뷰트 이름. 예: P, Cd, name
         owner: point / prim / vertex / detail 중 하나. UV 는 보통 vertex 다.
         count: 읽을 개수. 최대 200. detail 은 하나뿐이라 무시된다.
@@ -254,7 +279,7 @@ def attribute_values(
     if count < 1 or count > MAX_SAMPLE:
         raise ValueError(f"count 는 1 이상 {MAX_SAMPLE} 이하여야 합니다: {count}")
 
-    geo = _geometry(path)
+    geo = _geometry(path, output)
     finders = {
         "point": geo.findPointAttrib,
         "prim": geo.findPrimAttrib,

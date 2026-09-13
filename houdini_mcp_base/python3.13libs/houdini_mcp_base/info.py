@@ -89,6 +89,9 @@ def node_info(path: str, include_parameters: bool = False) -> dict[str, Any]:
         "child_count": len(node.children()),
         "inputs": [n.path() if n else None for n in node.inputs()],
         "outputs": [n.path() for n in node.outputs()],
+        # 포트가 여럿인 노드는 번호만으로는 어디에 무엇을 이어야 할지 모른다.
+        "input_labels": list(node.inputLabels())[:16] if hasattr(node, "inputLabels") else None,
+        "output_labels": list(node.outputLabels())[:16] if hasattr(node, "outputLabels") else None,
     }
 
     flags = node_flags(path)

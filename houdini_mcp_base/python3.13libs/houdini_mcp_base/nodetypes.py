@@ -155,6 +155,95 @@ def _describe(template: Any, folder: str, multi: bool, detailed: bool) -> list[d
     return out
 
 
+_LABEL_HOSTS = {
+    "Sop": ("/obj", "geo"),
+    "Object": ("/obj", None),
+    "Dop": ("/obj", "dopnet"),
+    "Chop": ("/obj", "chopnet"),
+    "Top": ("/obj", "topnet"),
+    "Lop": ("/stage", None),
+    "Driver": ("/out", None),
+}
+"""컴파일 노드의 라벨을 읽으려고 임시 인스턴스를 놓을 자리. 카테고리 -> (부모, 감쌀 네트워크)."""
+
+
+def _port_labels(node_type: Any) -> dict[str, Any]:
+    """입출력 포트 라벨.
+
+    노드 타입에는 라벨을 주는 API 가 없다(실측 - inputLabels 는 노드 인스턴스에만
+    있다). HDA 는 DialogScript 의 inputlabel/outputlabel 줄에서 읽고, 컴파일 노드는
+    Undo 를 끈 채 임시 노드를 놓아 읽은 뒤 지운다. DialogScript 에는 쓰이지 않는
+    "Sub-Network Input #4" 같은 줄도 있어 최대 포트 수로 자른다.
+    """
+    definition = node_type.definition()
+    if definition is not None:
+        section = definition.sections().get("DialogScript")
+        text = section.contents() if section is not None else ""
+        inputs = _dialog_labels(text, "inputlabel", node_type.maxNumInputs())
+        outputs = _dialog_labels(text, "outputlabel", node_type.maxNumOutputs())
+        # 한쪽만 적힌 HDA 가 흔하다(connectadjacentpieces 는 inputlabel 만 있다).
+        # 빈 쪽을 []로 두면 출력이 없는 노드로 읽히므로 임시 노드로 채운다.
+        missing_in = not inputs and node_type.maxNumInputs() > 0
+        missing_out = not outputs and node_type.maxNumOutputs() > 0
+        if not missing_in and not missing_out:
+            return {"input_labels": inputs, "output_labels": outputs}
+        if inputs or outputs:
+            placed = _placed_labels(node_type)
+            return {
+                "input_labels": inputs if not missing_in else placed["input_labels"],
+                "output_labels": outputs if not missing_out else placed["output_labels"],
+            }
+
+    return _placed_labels(node_type)
+
+
+def _placed_labels(node_type: Any) -> dict[str, Any]:
+    """Undo 를 끈 채 임시 노드를 놓아 라벨을 읽고 지운다."""
+
+    host = _LABEL_HOSTS.get(node_type.category().name())
+    if host is None:
+        return {"input_labels": None, "output_labels": None}
+    root_path, wrapper = host
+    root = hou.node(root_path)
+    if root is None:
+        return {"input_labels": None, "output_labels": None}
+    container = None
+    try:
+        with hou.undos.disabler():
+            if wrapper is not None:
+                container = root.createNode(wrapper, "hmcp_labels_tmp")
+                parent = container
+            else:
+                parent = root
+            node = parent.createNode(node_type.name(), "hmcp_labels_tmp_node")
+            labels = {
+                "input_labels": list(node.inputLabels())[: max(node_type.maxNumInputs(), 0)][:16],
+                "output_labels": list(node.outputLabels())[:16],
+            }
+            if container is None:
+                node.destroy()
+        return labels
+    except hou.Error:
+        return {"input_labels": None, "output_labels": None}
+    finally:
+        if container is not None:
+            with hou.undos.disabler():
+                container.destroy()
+
+
+def _dialog_labels(text: str, keyword: str, count: int) -> list[str]:
+    import re
+
+    labels: dict[int, str] = {}
+    for match in re.finditer(rf"^\s*{keyword}\s+(\d+)\s+(.+?)\s*$", text, re.M):
+        index = int(match.group(1)) - 1
+        if 0 <= index < count:
+            labels[index] = match.group(2).strip().strip('"')
+    if not labels:
+        return []
+    return [labels.get(i, "") for i in range(min(count, max(labels) + 1))]
+
+
 def _origin(node_type: Any) -> dict[str, Any]:
     """배포 출처. definition() 이 None 이면 빌트인이라는 단순 분류로는 안 된다.
 
@@ -228,18 +317,23 @@ def node_type_info(
     Args:
         category: Sop / Object / Dop 등.
         type_name: 노드 타입 이름. 예: tube, copytopoints::2.0
-        parm_pattern: 파라미터 이름 와일드카드. 기본은 전부.
+        parm_pattern: 파라미터 이름 와일드카드. 공백으로 여러 개를 줄 수 있다.
+            예: "rad* height cols". 기본은 전부.
         detailed: True 면 메뉴 항목과 조건부 활성식(DisableWhen)까지 준다.
+
+    입출력 포트 라벨도 준다. RBD Bullet Solver 처럼 입력이 여럿인 노드는 몇 번이
+    제약이고 몇 번이 충돌체인지 모르고 이으면 조용히 틀린다.
     """
     import fnmatch
 
+    patterns = parm_pattern.split() or ["*"]
     node_type = _find_type(category, type_name)
     parms: list[dict[str, Any]] = []
     for folder, template, multi in _walk(node_type.parmTemplateGroup().entries()):
         if type(template).__name__.replace("ParmTemplate", "") in UI_ONLY:
             continue
         for record in _describe(template, folder, multi, detailed):
-            if fnmatch.fnmatch(record["name"], parm_pattern):
+            if any(fnmatch.fnmatch(record["name"], p) for p in patterns):
                 parms.append(record)
 
     info: dict[str, Any] = {
@@ -247,6 +341,7 @@ def node_type_info(
         "label": node_type.description(),
         "inputs": {"min": node_type.minNumInputs(), "max": node_type.maxNumInputs()},
         "outputs": node_type.maxNumOutputs(),
+        **_port_labels(node_type),
         "deprecated": bool(node_type.deprecated()),
         "hidden": bool(node_type.hidden()),
         "parm_count": len(parms),
