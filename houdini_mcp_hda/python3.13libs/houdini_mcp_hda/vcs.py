@@ -33,6 +33,7 @@ from typing import Any
 import hou
 
 from houdini_mcp import tool, undoable
+from houdini_mcp_base import paths
 
 from ._common import require_directory, require_hda_file
 
@@ -118,7 +119,8 @@ def expand_hda(
         uncompress_contents: True 면 먼저 압축을 풀어 저장한다.
     """
     source = require_hda_file(file_path)
-    target = Path(hou.text.expandString(directory.strip())).expanduser()
+    paths.require_resolved(directory)
+    target = paths.to_path(directory)
     if target.exists() and not target.is_dir():
         raise ValueError(
             f"{target} 는 디렉토리가 아니라 파일입니다. 다른 경로를 주세요."
@@ -158,8 +160,8 @@ def expand_hda(
 
     tree = _tree(target)
     result: dict[str, Any] = {
-        "file": str(source),
-        "directory": str(target),
+        "file": source.as_posix(),
+        "directory": target.as_posix(),
         "uncompressed": uncompressed,
         **tree,
     }
@@ -218,8 +220,8 @@ def collapse_hda(
         definitions = hou.hda.definitionsInFile(str(target))
 
     return {
-        "directory": str(source),
-        "file": str(target),
+        "directory": source.as_posix(),
+        "file": target.as_posix(),
         "size": target.stat().st_size,
         "installed": install,
         "count": len(definitions),

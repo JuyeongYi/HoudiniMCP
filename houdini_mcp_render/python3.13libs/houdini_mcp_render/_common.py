@@ -1,11 +1,12 @@
-"""렌더 팩이 공유하는 Houdini·경로 헬퍼. 여기에는 툴이 없다.
+"""렌더 팩이 공유하는 Houdini 헬퍼. 여기에는 툴이 없다.
+
+경로 전개와 `$HFS/bin` 조회는 houdini_mcp_base.paths 를 쓴다.
 
 hou API 레퍼런스: https://www.sidefx.com/docs/houdini/hom/hou/index.html
 """
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import hou
@@ -52,57 +53,6 @@ def lop_stage(node: hou.LopNode):
             f"cook_node 로 먼저 확인하세요."
         )
     return stage
-
-
-def houdini_bin(name: str) -> Path:
-    """$HFS/bin 의 실행 파일 경로.
-
-    경로를 하드코딩하지 않는다. 확장자도 플랫폼마다 다르므로 $HFS 에서
-    실제로 찾은 것을 쓴다.
-    """
-    root = Path(hou.text.expandString("$HFS")) / "bin"
-    candidates = [root / name]
-    if sys.platform == "win32":
-        candidates.insert(0, root / f"{name}.exe")
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    raise RuntimeError(
-        f"{name} 을(를) $HFS/bin 에서 찾지 못했습니다 ({root}). "
-        f"Houdini 설치가 온전한지 확인하세요."
-    )
-
-
-def expand_path(path: str, frame: float | None = None) -> Path:
-    """$HIP/$F4 같은 Houdini 변수를 풀어 실제 경로로 만든다.
-
-    렌더 출력 경로는 거의 항상 변수를 담고 있다. 그대로 파일로 열면 없는
-    파일이 된다.
-    """
-    text = str(path)
-    if frame is None:
-        expanded = hou.text.expandString(text)
-    else:
-        expanded = hou.text.expandStringAtFrame(text, float(frame))
-    return Path(expanded)
-
-
-def require_file(path: str, frame: float | None = None) -> Path:
-    """파일이 실제로 있는지까지 확인한다."""
-    resolved = expand_path(path, frame)
-    if not resolved.exists():
-        hint = ""
-        parent = resolved.parent
-        if parent.exists():
-            siblings = sorted(p.name for p in parent.iterdir() if p.is_file())[:8]
-            if siblings:
-                hint = f" 같은 디렉토리에 있는 것: {', '.join(siblings)}"
-        else:
-            hint = f" 디렉토리 자체가 없습니다: {parent}"
-        raise ValueError(f"그런 파일이 없습니다: {resolved}.{hint}")
-    if not resolved.is_file():
-        raise ValueError(f"{resolved} 는 파일이 아닙니다.")
-    return resolved
 
 
 def writable_dir(path: Path) -> tuple[bool, str]:

@@ -14,7 +14,7 @@ from typing import Any
 
 from houdini_mcp import image_result, tool
 
-from ._common import expand_path, require_file
+from houdini_mcp_base import paths
 from ._image import compare, quick_level, subimages, summarize
 
 MAX_PREVIEW_WIDTH = 2048
@@ -41,7 +41,7 @@ def image_info(path: str, frame: float | None = None, subimage: int = 0) -> dict
         frame: 경로에 $F 가 있을 때 풀어 넣을 프레임.
         subimage: 볼 서브이미지(AOV) 번호.
     """
-    resolved = require_file(path, frame)
+    resolved = paths.require_file(path, frame)
     return summarize(resolved, subimage=int(subimage), with_stats=True)
 
 
@@ -72,7 +72,7 @@ def image_preview(
         raise ValueError(
             f"width 는 8 이상 {MAX_PREVIEW_WIDTH} 이하여야 합니다: {width}"
         )
-    resolved = require_file(path, frame)
+    resolved = paths.require_file(path, frame)
     from ._image import thumbnail_png
 
     return image_result(
@@ -101,8 +101,8 @@ def compare_images(
         fail_threshold: 이 값보다 큰 차이를 '실패 픽셀'로 센다.
         warn_threshold: 이 값보다 큰 차이를 '경고 픽셀'로 센다.
     """
-    left = require_file(a, frame)
-    right = require_file(b, frame)
+    left = paths.require_file(a, frame)
+    right = paths.require_file(b, frame)
     result = compare(left, right, fail_threshold, warn_threshold)
     if result["identical"]:
         result["verdict"] = "두 이미지가 완전히 같습니다. 바꾼 것이 렌더에 반영되지 않았습니다."
@@ -149,8 +149,8 @@ def image_sequence_report(
     if not frames:
         raise ValueError(f"프레임 범위가 비어 있습니다: {start}~{end} (inc={inc})")
 
-    first = expand_path(path, frames[0])
-    if str(first) == str(expand_path(path, frames[-1])) and len(frames) > 1:
+    first = paths.to_path(path, frames[0])
+    if str(first) == str(paths.to_path(path, frames[-1])) and len(frames) > 1:
         raise ValueError(
             f"경로에 프레임 변수가 없습니다: {path}. $F4 나 $F 를 넣으세요. "
             f"예: {first.parent.as_posix()}/{first.stem}.$F4{first.suffix}"
@@ -161,7 +161,7 @@ def image_sequence_report(
     black: list[float] = []
     broken: list[float] = []
     for frame in frames:
-        resolved = expand_path(path, frame)
+        resolved = paths.to_path(path, frame)
         if not resolved.exists():
             missing.append(frame)
             entries.append({"frame": frame, "missing": True})
@@ -172,7 +172,7 @@ def image_sequence_report(
             broken.append(frame)
             entries.append({"frame": frame, "error": str(exc)[:200]})
             continue
-        entry = {"frame": frame, "file": str(resolved), **level}
+        entry = {"frame": frame, "file": resolved.as_posix(), **level}
         if level["max"] <= 0.0:
             black.append(frame)
         entries.append(entry)
@@ -231,7 +231,7 @@ def list_aovs(path: str, frame: float | None = None) -> dict[str, Any]:
         path: 이미지 경로.
         frame: 경로에 $F 가 있을 때 풀어 넣을 프레임.
     """
-    resolved = require_file(path, frame)
+    resolved = paths.require_file(path, frame)
     parts = subimages(resolved)
     if not parts:
         raise ValueError(
@@ -240,7 +240,7 @@ def list_aovs(path: str, frame: float | None = None) -> dict[str, Any]:
         )
     top = summarize(resolved, subimage=0, with_stats=False)
     return {
-        "file": str(resolved),
+        "file": resolved.as_posix(),
         "file_format": top["file_format"],
         "subimage_count": len(parts),
         "aovs": parts,

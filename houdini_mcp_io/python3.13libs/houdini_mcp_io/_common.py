@@ -1,30 +1,24 @@
 """팩 전체가 쓰는 헬퍼. 툴은 여기 없다.
 
-네 가지를 모아 뒀다.
+경로 전개·시퀀스 글롭·`$HFS/bin` 실행은 houdini_mcp_base.paths 가 맡는다. 처음
+이 팩에서 만든 것이 그쪽으로 올라갔다. 여기에는 세 가지가 남았다.
 
-1. **경로** — Houdini 변수 전개, 시퀀스/UDIM 토큰을 글롭으로 바꿔 실제 파일을
-   세기, 존재·크기·수정시각. 이 팩은 경로를 가장 많이 다루므로 문자열 결합을
-   하지 않고 전부 `pathlib` 로 간다.
-2. **포맷 표** — 어느 확장자를 어느 경로로 써야 하는지. `saveToFile` 이
+1. **포맷 표** — 어느 확장자를 어느 경로로 써야 하는지. `saveToFile` 이
    조용히 거짓말하는 확장자를 여기서 막는다.
-3. **검증** — 지오메트리 요약과 대조. 내보낸 파일을 다시 읽어 비교한다.
-4. **외부 실행 파일** — `$HFS/bin` 의 `abcinfo` / `usdchecker` 를 찾아 돌린다.
+2. **검증** — 지오메트리 요약과 대조. 내보낸 파일을 다시 읽어 비교한다.
+3. **노드 공통** — 노드 해석, 코멘트, 임시 노드, 프레임 목록.
 
 hou API 레퍼런스: https://www.sidefx.com/docs/houdini/hom/hou/index.html
 """
 
 from __future__ import annotations
 
-import glob as globmod
-import os
-import re
-import subprocess
-import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 import hou
+
+from houdini_mcp_base.paths import MAX_SEQUENCE_FILES
 
 # --------------------------------------------------------------------------
 # 포맷 표
@@ -70,125 +64,6 @@ def suffix_of(path: Path) -> str:
     if name.endswith(".bgeo.sc"):
         return ".bgeo.sc"
     return path.suffix.lower()
-
-
-# --------------------------------------------------------------------------
-# 경로
-# --------------------------------------------------------------------------
-
-SEQUENCE_TOKENS = re.compile(
-    r"\$FF|\$F\d*|<UDIM>|<udim>|<UVTILE>|<uvtile>|%\(UDIM\)d|%0?\d*d",
-)
-"""프레임·타일마다 값이 달라지는 토큰.
-
-`$F4` 는 `hou.text.expandString` 이 현재 프레임으로 전개해 버리고, `<UDIM>` 은
-전개하지 않고 그대로 둔다(실측 확인). 두 경우 모두 "실제로 몇 장 있나"를 알려면
-토큰을 글롭 와일드카드로 바꿔야 한다.
-"""
-
-MAX_SEQUENCE_FILES = 5000
-"""시퀀스 하나에서 셀 파일 수 상한. 캐시 디렉토리를 통째로 훑지 않기 위해서."""
-
-
-def expand(raw: str) -> str:
-    """Houdini 변수를 푼다. 실패하면 원문을 그대로 돌려준다.
-
-    `$HIP` / `$JOB` / `$F` 는 물론 백틱 HScript 식도 여기서 풀린다.
-    """
-    try:
-        return hou.text.expandString(raw)
-    except hou.Error:
-        return raw
-
-
-def to_path(raw: str) -> Path:
-    """전개한 문자열을 Path 로. 슬래시 방향은 Path 가 알아서 맞춘다."""
-    return Path(expand(raw))
-
-
-def has_sequence_token(raw: str) -> bool:
-    return SEQUENCE_TOKENS.search(raw) is not None
-
-
-def sequence_pattern(raw: str) -> str:
-    """시퀀스 토큰을 `*` 로 바꾼 뒤 나머지 변수를 전개한 글롭 패턴.
-
-    전개를 먼저 하면 `$F4` 가 현재 프레임 숫자로 굳어 버린다. 그래서 토큰 치환이
-    먼저다.
-    """
-    return expand(SEQUENCE_TOKENS.sub("*", raw))
-
-
-def resolve_files(raw: str) -> tuple[list[Path], bool]:
-    """참조 하나가 실제로 가리키는 파일들과, 시퀀스인지 여부.
-
-    시퀀스가 아니면 파일 하나(없으면 빈 목록)를 돌려준다. 시퀀스면 글롭으로
-    실제 존재하는 것만 센다. 없는 프레임이 섞여 있어도 있는 것만 나온다.
-    """
-    if has_sequence_token(raw):
-        pattern = sequence_pattern(raw)
-        found: list[Path] = []
-        for index, hit in enumerate(globmod.iglob(pattern)):
-            if index >= MAX_SEQUENCE_FILES:
-                break
-            path = Path(hit)
-            if path.is_file():
-                found.append(path)
-        return sorted(found), True
-
-    target = to_path(raw)
-    return ([target] if target.is_file() else []), False
-
-
-def file_stat(path: Path) -> dict[str, Any]:
-    """존재·크기·수정시각. 없으면 exists=False 만."""
-    try:
-        info = path.stat()
-    except OSError:
-        return {"exists": False}
-    return {
-        "exists": True,
-        "bytes": info.st_size,
-        "modified": datetime.fromtimestamp(info.st_mtime, timezone.utc)
-        .astimezone()
-        .isoformat(timespec="seconds"),
-    }
-
-
-def require_absent(target: Path, overwrite: bool, what: str = "파일") -> None:
-    """이미 있는 것을 말없이 덮어쓰지 않는다. base 의 save_scene 과 같은 규약."""
-    if target.exists() and not overwrite:
-        raise ValueError(
-            f"이미 있는 {what}입니다: {target}. 덮어쓰려면 overwrite=True 를 주세요. "
-            f"남의 작업을 말없이 덮어쓰지 않기 위한 장치입니다."
-        )
-
-
-def prepare_output(file_path: str, overwrite: bool) -> Path:
-    """출력 경로를 확정하고 부모 디렉토리를 만든다."""
-    target = Path(expand(file_path))
-    if not target.name:
-        raise ValueError(
-            f"파일 이름이 없습니다: {file_path!r}. 디렉토리가 아니라 파일 경로를 주세요."
-        )
-    require_absent(target, overwrite)
-    try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
-        raise ValueError(
-            f"출력 디렉토리를 만들지 못했습니다: {target.parent} ({exc}) "
-            f"쓸 수 있는 경로인지 확인하세요."
-        ) from exc
-    return target
-
-
-def is_inside(child: Path, parent: Path) -> bool:
-    """child 가 parent 아래에 있는지. 심볼릭 링크는 풀지 않는다."""
-    try:
-        child.resolve().relative_to(parent.resolve())
-    except (ValueError, OSError):
-        return False
-    return True
 
 
 # --------------------------------------------------------------------------
@@ -366,53 +241,6 @@ def verify_native_file(target: Path, expected: dict[str, Any]) -> dict[str, Any]
 
 
 # --------------------------------------------------------------------------
-# 외부 실행 파일
-# --------------------------------------------------------------------------
-
-
-def hfs_bin(name: str) -> Path | None:
-    """`$HFS/bin` 의 실행 파일 경로. 없으면 None.
-
-    경로를 하드코딩하지 않고 `$HFS` 에서 얻는다. 확장자는 플랫폼마다 다르다.
-    """
-    base = Path(expand("$HFS")) / "bin"
-    candidates = [name + ".exe", name] if sys.platform == "win32" else [name]
-    for candidate in candidates:
-        path = base / candidate
-        if path.is_file():
-            return path
-    return None
-
-
-def run_hfs_tool(name: str, args: Sequence[str], timeout: float = 60.0) -> dict[str, Any]:
-    """`$HFS/bin` 의 CLI 를 돌려 stdout 을 돌려준다.
-
-    Alembic 은 파이썬 바인딩이 번들에 없어서(실측 확인) CLI 가 유일한 독립
-    검증 경로다.
-    """
-    exe = hfs_bin(name)
-    if exe is None:
-        return {"available": False, "reason": f"$HFS/bin 에 {name} 이 없습니다."}
-    try:
-        proc = subprocess.run(
-            [str(exe), *args],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        return {"available": True, "ok": False, "error": str(exc)}
-    return {
-        "available": True,
-        "ok": proc.returncode == 0,
-        "returncode": proc.returncode,
-        "stdout": proc.stdout,
-        "stderr": proc.stderr.strip()[:2000],
-    }
-
-
-# --------------------------------------------------------------------------
 # 노드 생성 공통
 # --------------------------------------------------------------------------
 
@@ -472,13 +300,3 @@ def truncate(items: Iterable[Any], limit: int) -> tuple[list[Any], int]:
     """목록을 잘라 (보여줄 것, 전체 수) 로. 모델 컨텍스트를 태우지 않기 위해서."""
     collected = list(items)
     return collected[:limit], len(collected)
-
-
-def env_paths(variable: str) -> list[Path]:
-    """`HOUDINI_PATH` 처럼 여러 경로를 담는 환경변수를 가른다.
-
-    구분자는 플랫폼마다 다르다. Windows 는 `;`, 나머지는 `:` 다. 그래서
-    `os.pathsep` 을 쓴다.
-    """
-    raw = expand(f"${variable}")
-    return [Path(part) for part in raw.split(os.pathsep) if part and part != "&"]

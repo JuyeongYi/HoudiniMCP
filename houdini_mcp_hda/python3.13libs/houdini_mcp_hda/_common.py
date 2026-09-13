@@ -30,6 +30,7 @@ from typing import Any
 
 import hou
 
+from houdini_mcp_base import paths
 from houdini_mcp_base.parmtemplate import component_names, describe_parm_template
 
 EMBEDDED = "Embedded"
@@ -181,7 +182,10 @@ def require_hda_file(file_path: str, must_exist: bool = True) -> Path:
     """.hda 파일 경로를 Path 로. 문자열을 손으로 조립하지 않는다."""
     if not file_path or not file_path.strip():
         raise ValueError("file_path 가 비어 있습니다. .hda 파일 경로를 주세요.")
-    path = Path(hou.text.expandString(file_path.strip())).expanduser()
+    if not must_exist:
+        # 쓸 자리다. 풀리지 않는 변수가 있으면 엉뚱한 곳에 에셋을 굽는다.
+        paths.require_resolved(file_path)
+    path = paths.to_path(file_path)
     if must_exist and not path.is_file():
         raise ValueError(
             f"그런 파일이 없습니다: {path}. "
@@ -194,7 +198,7 @@ def require_directory(directory: str, must_exist: bool = True) -> Path:
     """디렉토리 경로를 Path 로."""
     if not directory or not directory.strip():
         raise ValueError("directory 가 비어 있습니다. 디렉토리 경로를 주세요.")
-    path = Path(hou.text.expandString(directory.strip())).expanduser()
+    path = paths.to_path(directory)
     if must_exist and not path.is_dir():
         raise ValueError(
             f"그런 디렉토리가 없습니다: {path}. "

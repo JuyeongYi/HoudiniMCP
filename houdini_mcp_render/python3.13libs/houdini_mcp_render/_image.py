@@ -194,7 +194,7 @@ def summarize(path: Path, subimage: int = 0, with_stats: bool = True) -> dict[st
     """이미지 하나를 통째로 설명한다. 스펙 + AOV + 통계 + 진단."""
     buf = open_buf(path, subimage)
     report: dict[str, Any] = {
-        "file": str(path),
+        "file": path.as_posix(),
         "bytes": path.stat().st_size,
         "subimage": subimage,
     }

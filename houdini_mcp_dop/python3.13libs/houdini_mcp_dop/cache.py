@@ -14,14 +14,13 @@ DOP 캐시는 SOP 캐시(`houdini_mcp_base` 의 `write_cache`)와 다르다. 지
 
 from __future__ import annotations
 
-import os
-import re
-from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any
 
 import hou
 
 from houdini_mcp import tool, undoable
+from houdini_mcp_base import paths
 
 from ._common import (
     create_in,
@@ -40,20 +39,7 @@ _MODE_WRITE = "write"
 _MODE_NONE = "none"
 
 
-def _houdini_path(path: Path) -> str:
-    """Houdini 파일 파라미터에 넣을 문자열.
-
-    Houdini 는 모든 플랫폼에서 경로 구분자로 슬래시를 쓴다. 파이썬 쪽 경로
-    조작은 pathlib 로 하고, 파라미터에 넣을 때만 여기서 바꾼다.
-    """
-    return str(path).replace(os.sep, "/")
-
-
-# 파일 패턴의 프레임 변수. $SF(시뮬 프레임), $F, $F4 등.
-_FRAME_VAR = re.compile(r"\$S?F\d*")
-
-
-def _glob_written(pattern: str) -> list[dict[str, Any]]:
+def _written(pattern: str) -> list[dict[str, Any]]:
     """패턴에 맞는 파일을 디스크에서 찾는다.
 
     프레임 번호를 계산해서 파일 이름을 맞히지 않는다. `$SF` 는 시뮬 프레임이라
@@ -61,18 +47,8 @@ def _glob_written(pattern: str) -> list[dict[str, Any]]:
     startframe 1 인 dopnet 에서 프레임 12 가 $SF=15 로 나왔다). 실제로 무엇이
     쓰였는지는 디렉토리를 보는 편이 정확하다.
     """
-    path = Path(pattern)
-    glob_name = _FRAME_VAR.sub("*", path.name)
-    if glob_name == path.name:
-        # 프레임 변수가 없다 — 파일 하나만 쓴다.
-        glob_name = path.name
-    try:
-        found = sorted(path.parent.glob(glob_name))
-    except OSError:
-        return []
-    return [
-        {"path": str(p), "bytes": p.stat().st_size} for p in found if p.is_file()
-    ]
+    files, _ = paths.resolve_files(pattern)
+    return [{"path": f.as_posix(), "bytes": f.stat().st_size} for f in files]
 
 
 def _mode_token(node: hou.DopNode) -> str:
@@ -118,7 +94,8 @@ def write_sim_cache(
 
     Args:
         dopnet: DOP 네트워크 경로.
-        directory: .sim 파일을 담을 디렉토리. 없으면 만든다.
+        directory: .sim 파일을 담을 디렉토리. 없으면 만든다. $HIP 같은 변수를
+            그대로 쓴다 - File DOP 에 원문으로 걸려 씬을 옮겨도 풀린다.
         start: 시작 프레임.
         end: 끝 프레임.
         comment: File DOP 에 달 코멘트. 필수. 씬에 저장되므로 영어로.
@@ -138,22 +115,26 @@ def write_sim_cache(
             f"end({end}) 가 start({start}) 보다 앞섭니다. 시뮬은 앞으로만 굽습니다."
         )
 
-    target_dir = Path(directory).expanduser()
+    # 원문을 Path 로 만들어 mkdir 하면 현재 디렉토리에 `$HIP` 폴더가 생기고, 쓴
+    # 파일도 거기서 찾아 0 개로 보고했다(실측). 디렉토리는 전개판으로 만들고 File
+    # DOP 에는 원문을 건다.
+    paths.require_resolved(directory)
+    target_dir = paths.to_path(directory)
     try:
         target_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         raise ValueError(
-            f"{target_dir} 디렉토리를 만들지 못했습니다: {exc}. "
+            f"{target_dir.as_posix()} 디렉토리를 만들지 못했습니다: {exc}. "
             f"쓸 수 있는 경로를 주세요."
         ) from exc
 
-    pattern = filename or f"{net.name()}.$SF.sim"
-    if "$SF" not in pattern and "$F" not in pattern:
+    pattern = paths.to_parm(filename or f"{net.name()}.$SF.sim")
+    if not paths.FRAME_TOKENS.search(pattern):
         raise ValueError(
             f"filename 에 프레임 번호 자리가 없습니다: {pattern!r}. "
             f"'{net.name()}.$SF.sim' 처럼 $SF 를 넣으세요. 없으면 한 파일만 덮어씁니다."
         )
-    full_pattern = _houdini_path(target_dir / pattern)
+    full_pattern = str(PurePosixPath(paths.to_parm(directory)) / pattern)
 
     output = net.displayNode()
     if output is None:
@@ -192,13 +173,14 @@ def write_sim_cache(
         # 덮어쓴다. 끝나면 꺼 둔다.
         set_menu(node, "mode", _MODE_NONE)
 
-    written = _glob_written(full_pattern)
+    written = _written(full_pattern)
     total_bytes = sum(entry["bytes"] for entry in written)
     expected = end - start + 1
 
     result: dict[str, Any] = {
         "dopnet": net.path(),
         "cache_node": node.path(),
+        "directory": paths.describe(directory),
         "pattern": full_pattern,
         "range": [start, end],
         "created": created,
@@ -271,7 +253,7 @@ def sim_cache_status(dopnet: str, start: int | None = None, end: int | None = No
         if not isinstance(node, hou.DopNode) or node.type().name() != "file":
             continue
         pattern = node.parm("file").unexpandedString()
-        files = _glob_written(pattern)
+        files = _written(pattern)
         total = sum(entry["bytes"] for entry in files)
         entry: dict[str, Any] = {
             "node": node.path(),

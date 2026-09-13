@@ -12,11 +12,14 @@ hou API 레퍼런스: https://www.sidefx.com/docs/houdini/hom/hou/index.html
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import hou
 
 from houdini_mcp import tool
+
+from . import paths
 
 MAX_TYPES = 200
 """한 번에 돌려줄 노드 타입 수 상한. Sop 만 1,690개라 전부 주면 읽히지 않는다."""
@@ -161,15 +164,14 @@ def _origin(node_type: Any) -> dict[str, Any]:
     definition = node_type.definition()
     if definition is None:
         return {"source": "builtin_compiled"}
-    path = definition.libraryFilePath().replace("\\", "/")
-    hfs = hou.text.expandString("$HFS").replace("\\", "/").rstrip("/")
-    if "sidefx_packages" in path:
+    library = Path(definition.libraryFilePath())
+    if any("sidefx_packages" in part for part in library.parts):
         source = "package_hda"
-    elif path.startswith(hfs):
+    elif paths.is_inside(library, paths.to_path("$HFS")):
         source = "builtin_hda"
     else:
         source = "user_hda"
-    return {"source": source, "library": path.rsplit("/", 1)[-1]}
+    return {"source": source, "library": library.name}
 
 
 @tool()

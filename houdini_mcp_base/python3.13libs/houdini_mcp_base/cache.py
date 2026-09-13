@@ -14,12 +14,14 @@ hou API 레퍼런스: https://www.sidefx.com/docs/houdini/hom/hou/SopNode.html
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterator
 
 import hou
 
 from houdini_mcp import tool, undoable
+
+from . import paths
 
 CACHE_TYPE = "filecache::2.0"
 """새로 만들 때 쓸 타입. 실측으로 확인한 이 Houdini 에 있는 것 중 최신이다."""
@@ -81,6 +83,19 @@ def _output_parm(node: hou.Node) -> hou.Parm:
     )
 
 
+def _output_file(node: hou.Node) -> dict[str, Any] | None:
+    """출력 경로의 원문과 전개판. 원문이 식이면(filecache 의 sopoutput) 값만 준다."""
+    try:
+        parm = _output_parm(node)
+    except ValueError:
+        return None
+    try:
+        return paths.describe(parm.unexpandedString())
+    except hou.OperationFailed:
+        # 키프레임·식이 걸린 파라미터는 원문을 꺼낼 수 없다(실측).
+        return paths.describe(parm.evalAsString())
+
+
 def _written_files(node: hou.Node, start: int, end: int) -> list[dict[str, Any]]:
     """캐시가 실제로 쓴 파일들. 프레임마다 경로가 달라질 수 있어 프레임별로 푼다."""
     parm = _output_parm(node)
@@ -95,7 +110,7 @@ def _written_files(node: hou.Node, start: int, end: int) -> list[dict[str, Any]]
             continue
         seen.add(raw)
         target = Path(raw)
-        entry: dict[str, Any] = {"frame": frame, "path": str(target), "exists": target.exists()}
+        entry: dict[str, Any] = {"frame": frame, "path": target.as_posix(), "exists": target.exists()}
         if entry["exists"]:
             stat = target.stat()
             entry["bytes"] = stat.st_size
@@ -144,6 +159,8 @@ def write_cache(
         raise ValueError(
             "comment 가 비어 있습니다. 이 캐시가 무엇인지 적어 주세요."
         )
+    if file_path:
+        paths.require_resolved(file_path)
 
     node = _require(source)
     created = False
@@ -171,9 +188,12 @@ def write_cache(
         method = cache.parm("filemethod")
         if method is not None:
             method.set("explicit")
-        target = Path(file_path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        _output_parm(cache).set(str(target))
+        # 파라미터에는 원문을 건다. Path 로 만들어 넣으면 Windows 에서 역슬래시가
+        # 되어 쓰기가 실패하고, 원문 그대로 mkdir 하면 현재 디렉토리에 `$HIP`
+        # 폴더가 생긴다(둘 다 실측). 디렉토리는 전개판으로 만든다.
+        if not paths.has_sequence_token(PurePosixPath(paths.to_parm(file_path)).parent):
+            paths.ensure_parent(paths.to_path(file_path))
+        _output_parm(cache).set(paths.to_parm(file_path))
 
     trange = cache.parm("trange")
     if frame_start is not None or frame_end is not None:
@@ -215,6 +235,7 @@ def write_cache(
         "comment": cache.comment(),
         "frame_start": start,
         "frame_end": end,
+        "file": _output_file(cache),
         "files": files,
         "written_count": len(written),
         "total_bytes": sum(f.get("bytes", 0) for f in written),
@@ -413,9 +434,9 @@ def clear_cache(
         try:
             target.unlink()
         except OSError as exc:
-            failed.append({"path": str(target), "why": str(exc)})
+            failed.append({"path": target.as_posix(), "why": str(exc)})
             continue
-        deleted.append(str(target))
+        deleted.append(target.as_posix())
 
     result["path"] = node.path()
     result["deleted"] = deleted

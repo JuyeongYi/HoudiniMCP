@@ -10,12 +10,13 @@ numpy 로 통계·분위수·히스토그램까지 줄여서 돌려준다.
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Sequence
 
 import numpy
 
 from houdini_mcp import tool, undoable
+from houdini_mcp_base import paths
 
 from ._common import (
     OWNERS,
@@ -100,7 +101,8 @@ def export_attribute(
     Args:
         path: SOP 노드 경로.
         name: 어트리뷰트 이름.
-        file_path: 저장할 .npy 경로. 확장자가 없으면 붙여 준다.
+        file_path: 저장할 .npy 경로. 확장자가 없으면 붙여 준다. $HIP 같은 변수를
+            그대로 쓴다.
         owner: point / prim / vertex.
     """
     if owner == "detail":
@@ -112,17 +114,21 @@ def export_attribute(
     _, geo = geometry_at(path)
     array = attrib_array(geo, owner, name)
 
-    target = Path(file_path)
-    if target.suffix != ".npy":
-        target = target.with_suffix(".npy")
-    target.parent.mkdir(parents=True, exist_ok=True)
+    # 확장자는 원문에서 고친다. 원문을 Path 로 만들어 mkdir 하면 현재 디렉토리에
+    # `$HIP` 폴더가 생긴다(실측). 파일시스템에는 전개판만 넘긴다.
+    raw = PurePosixPath(paths.to_parm(file_path))
+    if raw.suffix != ".npy":
+        raw = raw.with_suffix(".npy")
+    paths.require_resolved(raw)
+    target = paths.to_path(raw)
+    paths.ensure_parent(target)
     numpy.save(target, array)
 
     return {
         "path": path,
         "name": name,
         "owner": owner,
-        "file": str(target),
+        "file": paths.describe(raw),
         "shape": list(array.shape),
         "dtype": str(array.dtype),
         "bytes": target.stat().st_size,

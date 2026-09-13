@@ -18,6 +18,8 @@ import hou
 
 from houdini_mcp import tool
 
+from . import paths
+
 # Apprentice 는 .hipnc 만 저장할 수 있다. 확장자를 강제하지 않고 안내만 한다.
 LICENSE_EXT = {
     "Apprentice": ".hipnc",
@@ -65,7 +67,12 @@ def save_scene(path: str | None = None, overwrite: bool = False) -> dict[str, An
     """
     license_name, required = _license_hint()
 
-    target = Path(path) if path else Path(hou.hipFile.path())
+    if path:
+        # hou.hipFile.save 는 `$HIP` 원문을 받지 않는다(실측). 전개해서 넘긴다.
+        paths.require_resolved(path)
+        target = paths.to_path(path)
+    else:
+        target = Path(hou.hipFile.path())
     if required and target.suffix.lower() != required:
         raise ValueError(
             f"{license_name} 라이선스는 {required} 만 저장할 수 있습니다. "
@@ -77,7 +84,7 @@ def save_scene(path: str | None = None, overwrite: bool = False) -> dict[str, An
             f"이미 있는 파일입니다: {target}. 덮어쓰려면 overwrite=True 를 주세요."
         )
 
-    target.parent.mkdir(parents=True, exist_ok=True)
+    paths.ensure_parent(target)
     try:
         hou.hipFile.save(str(target))
     except hou.OperationFailed as exc:
@@ -101,9 +108,8 @@ def load_scene(path: str, discard_changes: bool = False) -> dict[str, Any]:
         path: 열 .hip / .hipnc / .hiplc 경로.
         discard_changes: 저장하지 않은 변경을 버리고 연다.
     """
-    target = Path(path)
-    if not target.exists():
-        raise ValueError(f"그런 파일이 없습니다: {target}")
+    # hou.hipFile.load 도 `$HIP` 원문을 받지 않는다(실측).
+    target = paths.require_file(path)
 
     if hou.hipFile.hasUnsavedChanges() and not discard_changes:
         raise ValueError(

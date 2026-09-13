@@ -20,16 +20,15 @@ import hou
 
 from houdini_mcp import tool, undoable
 
+from houdini_mcp_base import paths
+
 from .common import (
-    expand_path,
     require_comment,
     require_material,
     set_comment,
     terminal_shader,
 )
 
-UDIM_TOKENS = ("<UDIM>", "<udim>", "%(UDIM)d")
-"""경로에 들어가는 UDIM 자리표시자. Houdini 와 MaterialX 가 쓰는 표기들."""
 
 USAGE_COLOR = "color"
 USAGE_SCALAR = "scalar"
@@ -58,21 +57,16 @@ def _oiio():
     return oiio
 
 
-def _udim_token(raw: str) -> str | None:
-    for token in UDIM_TOKENS:
-        if token in raw:
-            return token
-    return None
+def _udim_tiles(raw: str) -> tuple[str | None, list[str]]:
+    """UDIM 토큰과 실제로 있는 타일들. 토큰이 없으면 (None, []).
 
-
-def _udim_tiles(raw: str, token: str) -> list[str]:
-    """UDIM 타일을 글롭으로 실제로 센다. 문자열만 보고 있다고 하지 않는다."""
-    pattern = raw.replace(token, "[0-9][0-9][0-9][0-9]")
-    path = expand_path(pattern)
-    parent = path.parent
-    if not parent.is_dir():
-        return []
-    return sorted(str(match) for match in parent.glob(path.name))
+    토큰 인식과 글롭은 base 의 paths 가 한다 - 네 자리 숫자만 타일로 센다.
+    """
+    token = paths.UDIM_TOKENS.search(paths.to_parm(raw))
+    if token is None:
+        return None, []
+    tiles, _ = paths.resolve_files(raw)
+    return token.group(), [tile.as_posix() for tile in tiles]
 
 
 def _read_spec(file_path: Path) -> dict[str, Any]:
@@ -168,15 +162,14 @@ def _usage_warnings(info: dict[str, Any], usage: str, colorspace: str) -> list[s
 
 def _inspect(raw: str, usage: str = "", colorspace: str = "") -> dict[str, Any]:
     """텍스처 하나를 조사한다. UDIM 이면 타일을 세고 첫 타일을 연다."""
-    resolved = expand_path(raw)
+    resolved = paths.to_path(raw)
     info: dict[str, Any] = {
         "raw": raw,
-        "resolved": str(resolved),
+        "resolved": resolved.as_posix(),
     }
 
-    token = _udim_token(raw)
+    token, tiles = _udim_tiles(raw)
     if token is not None:
-        tiles = _udim_tiles(raw, token)
         info["udim"] = True
         info["udim_token"] = token
         info["tile_count"] = len(tiles)
@@ -189,7 +182,7 @@ def _inspect(raw: str, usage: str = "", colorspace: str = "") -> dict[str, Any]:
             )
             return info
         resolved = Path(tiles[0])
-        info["inspected_tile"] = str(resolved)
+        info["inspected_tile"] = resolved.as_posix()
 
     if not resolved.is_file():
         info["exists"] = False
@@ -316,7 +309,7 @@ def assign_texture(
     # 1) 셰이더 자신이 파일 파라미터를 가진 경우 (principledshader 등).
     direct = _file_parm(shader, to_input)
     if direct is not None:
-        direct.set(file)
+        direct.set(paths.to_parm(file))
         return {
             "material": material_node.path(),
             "shader": shader.path(),
@@ -342,7 +335,7 @@ def assign_texture(
     node_name = name or f"{to_input}_tex"
     image = material_node.createNode("mtlximage", node_name=node_name)
     image.parm("signature").set(signature)
-    image.parm("file").set(file)
+    image.parm("file").set(paths.to_parm(file))
     if colorspace:
         image.parm("filecolorspace").set(colorspace)
     set_comment(image, comment)
@@ -410,13 +403,12 @@ def list_textures(inspect: bool = False, missing_only: bool = False) -> dict[str
         if inspect:
             entry = _inspect(raw)
         else:
-            resolved = expand_path(parm.eval())
-            token = _udim_token(raw)
+            resolved = paths.to_path(parm.eval())
+            token, tiles = _udim_tiles(raw)
             if token is not None:
-                tiles = _udim_tiles(raw, token)
                 entry = {
                     "raw": raw,
-                    "resolved": str(resolved),
+                    "resolved": resolved.as_posix(),
                     "udim": True,
                     "tile_count": len(tiles),
                     "exists": bool(tiles),
@@ -424,7 +416,7 @@ def list_textures(inspect: bool = False, missing_only: bool = False) -> dict[str
             else:
                 entry = {
                     "raw": raw,
-                    "resolved": str(resolved),
+                    "resolved": resolved.as_posix(),
                     "exists": resolved.is_file(),
                 }
         entry["node"] = parm.node().path()

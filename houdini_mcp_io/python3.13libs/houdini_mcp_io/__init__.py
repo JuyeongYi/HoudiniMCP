@@ -1,9 +1,11 @@
 """임포트·익스포트·의존성 툴 팩 — 씬과 디스크 사이를 오간다.
 
-    export   지오메트리·USD·Alembic·FBX 내보내기. 전부 **쓴 뒤 다시 읽어 검증**한다
-    load     파일을 씬으로 들이기(`import` 는 예약어라 모듈명이 load 다)
-    deps     씬이 무엇에 의존하는지 — 목록·수집·경로 치환
-    check    이식성 점검
+    export       네이티브 지오메트리 내보내기와 포맷 안내. 전부 **쓴 뒤 다시 읽어 검증**한다
+    usd          USD 내보내기. LOP 스테이지를 pxr 로 쓰고 다시 연다
+    interchange  Alembic·FBX 내보내기. abcinfo·시그니처로 검증한다
+    load         파일을 씬으로 들이기(`import` 는 예약어라 모듈명이 load 다)
+    deps         씬이 무엇에 의존하는지 — 목록·수집·경로 치환
+    check        이식성 점검
 
 이 팩이 기존 구현과 갈라지는 지점은 둘이다.
 
@@ -25,6 +27,8 @@
 
 TOOL_MODULES = (
     "export",
+    "usd",
+    "interchange",
     "load",
     "deps",
     "check",

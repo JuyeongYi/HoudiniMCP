@@ -25,22 +25,16 @@ HDA 라이브러리, USD 레이어, 텍스처가 전부 한 목록에 들어와�
 from __future__ import annotations
 
 import shutil
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Sequence
 
 import hou
 
 from houdini_mcp import tool, undoable
 
-from ._common import (
-    expand,
-    file_stat,
-    has_sequence_token,
-    is_inside,
-    resolve_files,
-    sequence_pattern,
-    truncate,
-)
+from houdini_mcp_base import paths
+
+from ._common import truncate
 
 OUTPUT_PARMS = frozenset(
     {
@@ -91,12 +85,12 @@ def reference_entry(parm: hou.Parm | None, raw: str) -> dict[str, Any]:
     """참조 하나를 JSON 으로 낼 수 있는 모양으로. 존재 여부까지 판정한다."""
     node = parm.node() if parm is not None else None
     try:
-        resolved = parm.eval() if parm is not None else expand(raw)
+        resolved = parm.eval() if parm is not None else paths.expand(raw)
     except hou.Error:
         # 식이 깨진 참조. 값을 못 구한다는 사실 자체가 보고할 내용이다.
         resolved = None
 
-    files, is_sequence = resolve_files(raw)
+    files, is_sequence = paths.resolve_files(raw)
     entry: dict[str, Any] = {
         "node": node.path() if node is not None else None,
         "node_type": node.type().name() if node is not None else None,
@@ -109,16 +103,16 @@ def reference_entry(parm: hou.Parm | None, raw: str) -> dict[str, Any]:
         "sequence": is_sequence,
     }
     if is_sequence:
-        entry["pattern"] = sequence_pattern(raw)
+        entry["pattern"] = paths.sequence_glob(raw)
         entry["file_count"] = len(files)
         entry["exists"] = bool(files)
         if files:
-            entry.update(file_stat(files[0]))
+            entry.update(paths.file_stat(files[0]))
             entry["total_bytes"] = sum(
                 (f.stat().st_size if f.is_file() else 0) for f in files
             )
     elif files:
-        entry.update(file_stat(files[0]))
+        entry.update(paths.file_stat(files[0]))
     else:
         entry["exists"] = False
     return entry
@@ -138,7 +132,7 @@ def iter_references(kinds: Sequence[str] | None = None) -> Iterator[dict[str, An
 
 def resolved_files(entry: dict[str, Any]) -> list[Path]:
     """참조 하나가 실제로 가리키는 파일들."""
-    files, _ = resolve_files(entry["raw"])
+    files, _ = paths.resolve_files(entry["raw"])
     return files
 
 
@@ -239,7 +233,8 @@ def collect_dependencies(
             ($F4, <UDIM>)은 그대로 보존한다.
         dry_run: True(기본)면 복사하지 않고 계획만 돌려준다.
     """
-    destination = Path(expand(target_dir))
+    paths.require_resolved(target_dir)
+    destination = paths.to_path(target_dir)
     entries = [e for e in iter_references(kinds) if e["role"] == "input"]
 
     plan: list[dict[str, Any]] = []
@@ -256,15 +251,15 @@ def collect_dependencies(
         for source in files:
             name = source.name
             previous = claimed.get(name)
-            if previous is not None and previous != str(source):
-                collisions.append({"name": name, "first": previous, "second": str(source)})
+            if previous is not None and previous != source.as_posix():
+                collisions.append({"name": name, "first": previous, "second": source.as_posix()})
                 continue
-            claimed[name] = str(source)
+            claimed[name] = source.as_posix()
             total_bytes += source.stat().st_size
             plan.append(
                 {
-                    "source": str(source),
-                    "target": str(destination / name),
+                    "source": source.as_posix(),
+                    "target": (destination / name).as_posix(),
                     "node": entry["node"],
                     "parm": entry["parm"],
                     "raw": entry["raw"],
@@ -280,7 +275,7 @@ def collect_dependencies(
         )
 
     result: dict[str, Any] = {
-        "target_dir": str(destination),
+        "target_dir": destination.as_posix(),
         "dry_run": dry_run,
         "planned": len(plan),
         "missing": missing,
@@ -300,7 +295,7 @@ def collect_dependencies(
     for item in plan:
         source, target = Path(item["source"]), Path(item["target"])
         if target.exists() and not overwrite:
-            skipped.append(str(target))
+            skipped.append(target.as_posix())
             continue
         try:
             shutil.copy2(source, target)
@@ -320,15 +315,18 @@ def collect_dependencies(
         )
 
     if relink:
-        result["relinked"] = _relink(entries, destination)
+        result["relinked"] = _relink(entries, paths.portable(target_dir))
     return result
 
 
-def _relink(entries: Sequence[dict[str, Any]], destination: Path) -> list[dict[str, Any]]:
+def _relink(entries: Sequence[dict[str, Any]], destination: str) -> list[dict[str, Any]]:
     """파라미터를 모아 둔 디렉토리로 돌린다. 시퀀스 토큰은 보존한다.
 
     전개된 경로가 아니라 **원문의 파일 이름**을 쓴다. 그래야 `$F4` 나 `<UDIM>` 이
     살아남아 시퀀스가 계속 시퀀스로 읽힌다.
+
+    디렉토리도 원문이다(paths.portable). 전개된 절대 경로를 걸면 `$HIP` 을 잃어
+    모아 놓은 씬을 다른 기계로 옮기는 순간 다시 깨진다 - 모으는 목적이 사라진다.
     """
     changes: list[dict[str, Any]] = []
     for entry in entries:
@@ -343,7 +341,7 @@ def _relink(entries: Sequence[dict[str, Any]], destination: Path) -> list[dict[s
         # Houdini 파일 파라미터는 플랫폼을 가리지 않고 슬래시로 쓴다. 씬 파일이
         # 다른 OS 에서 열려도 그대로 풀리게 하기 위해서다(패키지 JSON 의 hpath 와
         # 같은 이유). 경로 조립 자체는 pathlib 이 한다.
-        new_raw = (destination / Path(entry["raw"]).name).as_posix()
+        new_raw = str(PurePosixPath(destination) / PurePosixPath(paths.to_parm(entry["raw"])).name)
         if new_raw == entry["raw"]:
             continue
         try:
@@ -423,7 +421,7 @@ def remap_paths(
             "from": raw,
             "to": new_raw,
             "kind": entry["kind"],
-            "new_exists": bool(resolve_files(new_raw)[0]),
+            "new_exists": bool(paths.resolve_files(new_raw)[0]),
         }
         if not dry_run:
             node = hou.node(entry["node"] or "")
@@ -432,7 +430,7 @@ def remap_paths(
                 failures.append({**record, "reason": "파라미터를 찾지 못했습니다."})
                 continue
             try:
-                parm.set(new_raw)
+                parm.set(paths.to_parm(new_raw))
             except hou.Error as exc:
                 failures.append({**record, "reason": str(exc)[:200]})
                 continue
@@ -476,17 +474,17 @@ def portability_flags(entry: dict[str, Any]) -> list[str]:
 
     if resolved:
         target = Path(resolved)
-        hip_dir = Path(expand("$HIP"))
-        hfs_dir = Path(expand("$HFS"))
-        if is_inside(target, hfs_dir):
+        hip_dir = paths.to_path("$HIP")
+        hfs_dir = paths.to_path("$HFS")
+        if paths.is_inside(target, hfs_dir):
             flags.append("inside_houdini_install")
-        elif not is_inside(target, hip_dir):
+        elif not paths.is_inside(target, hip_dir):
             flags.append("outside_hip")
 
     if not entry.get("exists") and entry["role"] == "input":
         flags.append("missing")
 
-    if has_sequence_token(raw) and entry.get("file_count") == 0:
+    if paths.has_sequence_token(raw) and entry.get("file_count") == 0:
         flags.append("empty_sequence")
 
     return flags

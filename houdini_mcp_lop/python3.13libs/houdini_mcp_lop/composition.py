@@ -7,12 +7,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
-import hou
-
 from houdini_mcp import tool, undoable
+from houdini_mcp_base import paths
 
 from .usdcommon import (
     arc_brief,
@@ -221,13 +219,13 @@ def add_reference(
                 f"'prim' / 'inherit' / 'specialize' 로 하고 source_prim 을 주세요."
             )
         # 없는 파일을 걸면 조용히 빈 프림이 되므로 여기서 미리 잡는다.
-        expanded = Path(hou.text.expandString(file_path))
-        if not expanded.exists():
+        try:
+            paths.require_file(file_path)
+        except ValueError as exc:
             raise ValueError(
-                f"그런 파일이 없습니다: {expanded}. "
-                f"USD 파일 경로(.usd/.usda/.usdc/.usdz)를 확인하세요. "
+                f"{exc} USD 파일 경로(.usd/.usda/.usdc/.usdz)를 확인하세요. "
                 f"$HIP 같은 Houdini 변수를 써도 됩니다."
-            )
+            ) from exc
     else:
         if not source_prim:
             raise ValueError(
@@ -245,7 +243,7 @@ def add_reference(
     created.parm("reftype1").set(reference_type)
     created.parm("createprims1").set("on" if create_prims else "off")
     if from_file:
-        created.parm("filepath1").set(file_path)
+        created.parm("filepath1").set(paths.to_parm(file_path))
     if source_prim:
         # 빈 문자열이 "아래 경로를 그대로 쓴다"는 뜻이다(automaticPrim/defaultPrim 아님).
         created.parm("filerefprim1").set("")
@@ -290,23 +288,23 @@ def add_sublayer(
     """
     node = resolve_lop(lop)
 
-    expanded = Path(hou.text.expandString(file_path))
-    if not expanded.exists():
+    try:
+        expanded = paths.require_file(file_path)
+    except ValueError as exc:
         raise ValueError(
-            f"그런 파일이 없습니다: {expanded}. "
-            f"USD 파일 경로(.usd/.usda/.usdc/.usdz)를 확인하세요."
-        )
+            f"{exc} USD 파일 경로(.usd/.usda/.usdc/.usdz)를 확인하세요."
+        ) from exc
 
     stem = expanded.stem or "layer"
     created, _ = insert_lop(node, "sublayer", node_name or f"sub_{stem}", comment)
     created.parm("num_files").set(1)
-    created.parm("filepath1").set(file_path)
+    created.parm("filepath1").set(paths.to_parm(file_path))
 
     stage = stage_of(created)
     return node_report(
         created,
         {
-            "file": str(expanded),
+            "file": paths.describe(file_path),
             "root_sublayers": list(stage.GetRootLayer().subLayerPaths),
             "prim_counts": created.stagePrimStats(),
         },

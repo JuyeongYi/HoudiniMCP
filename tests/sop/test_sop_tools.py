@@ -17,6 +17,7 @@ hython 을 서브프로세스로 띄워 scenario.py 를 돌리고, 쿡한 결과
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -28,7 +29,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "package_order"))
 
 from harness import HoudiniNotFound, find_hfs, hython_path, python_tag  # noqa: E402
 
-from scenario import MARKER  # noqa: E402
+
+def _load_scenario():
+    """scenario.py 를 이 테스트 전용 이름으로 읽는다.
+
+    팩마다 tests/<팩>/scenario.py 를 두므로 `from scenario import ...` 로 읽으면
+    먼저 읽힌 쪽이 sys.modules["scenario"] 를 차지하고, 나중에 읽는 쪽이 남의
+    MARKER 를 쓰게 된다. 이 파일이 두 번 당했다 - 한 번은 rig
+    테스트가, 한 번은 paths 테스트가 먼저 수집되며 17개가 통째로 깨졌다.
+    """
+    path = Path(__file__).with_name("scenario.py")
+    spec = importlib.util.spec_from_file_location("houdini_mcp_sop_scenario", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+MARKER = _load_scenario().MARKER
 
 REPO = Path(__file__).resolve().parents[2]
 

@@ -22,10 +22,11 @@ import hou
 
 from houdini_mcp import tool, undoable
 
+from houdini_mcp_base import paths
+
 from .common import (
     KIND_MATERIALX,
     build_material,
-    expand_path,
     material_kind,
     require_comment,
     require_material,
@@ -76,7 +77,8 @@ def _vop2mtlx():
 
 
 def _target_file(file: str) -> Path:
-    path = expand_path(file)
+    paths.require_resolved(file)
+    path = paths.to_path(file)
     if path.suffix.lower() != MTLX_SUFFIX:
         path = path.with_suffix(MTLX_SUFFIX)
     return path
@@ -132,7 +134,7 @@ def save_material(material: str, file: str) -> dict[str, Any]:
     return {
         "material": node.path(),
         "kind": material_kind(node),
-        "file": str(path),
+        "file": path.as_posix(),
         "size_bytes": path.stat().st_size,
         "materialx_valid": bool(valid),
         "materialx_message": message or "",
@@ -157,21 +159,21 @@ def list_presets(directory: str = "$HIP/materials") -> dict[str, Any]:
         directory: 훑을 디렉토리. 예: $HIP/materials
     """
     mx = _materialx()
-    root = expand_path(directory)
+    root = paths.to_path(directory)
     if not root.is_dir():
         return {
-            "directory": str(root),
+            "directory": root.as_posix(),
             "count": 0,
             "presets": [],
             "hint": (
-                f"디렉토리가 없습니다: {root}. "
+                f"디렉토리가 없습니다: {root.as_posix()}. "
                 f"save_material 로 저장하면 만들어집니다."
             ),
         }
 
     presets = []
     for path in sorted(root.glob(f"*{MTLX_SUFFIX}")):
-        entry: dict[str, Any] = {"file": str(path), "size_bytes": path.stat().st_size}
+        entry: dict[str, Any] = {"file": path.as_posix(), "size_bytes": path.stat().st_size}
         try:
             document = mx.createDocument()
             mx.readFromXmlFile(document, str(path))
@@ -189,7 +191,7 @@ def list_presets(directory: str = "$HIP/materials") -> dict[str, Any]:
             entry["error"] = str(exc)
         presets.append(entry)
 
-    return {"directory": str(root), "count": len(presets), "presets": presets}
+    return {"directory": root.as_posix(), "count": len(presets), "presets": presets}
 
 
 # ---- 읽어 들이기 -----------------------------------------------------
@@ -359,7 +361,7 @@ def load_material(
     mx = _materialx()
     comment = require_comment(comment, "이 머티리얼")
 
-    path = expand_path(file)
+    path = paths.to_path(file)
     if not path.is_file():
         raise ValueError(
             f"MaterialX 문서가 없습니다: {path}. "
@@ -404,7 +406,7 @@ def load_material(
         "name": material.name(),
         "kind": material_kind(material),
         "comment": material.comment(),
-        "file": str(path),
+        "file": path.as_posix(),
         "nodegraph": graph.getName(),
         "source_materialx_valid": bool(valid),
         "source_materialx_message": message or "",

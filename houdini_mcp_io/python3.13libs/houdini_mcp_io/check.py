@@ -24,7 +24,9 @@ import hou
 
 from houdini_mcp import tool
 
-from ._common import expand, truncate
+from houdini_mcp_base import paths
+
+from ._common import truncate
 from .deps import iter_references, portability_flags
 
 MAX_LISTED = 100
@@ -114,7 +116,7 @@ def validate_scene(include_outputs: bool = False, limit: int = MAX_LISTED) -> di
     return {
         "hip": str(hip_path),
         "saved": saved,
-        "hip_dir": expand("$HIP"),
+        "hip_dir": paths.expand("$HIP"),
         "checked": checked,
         "issue_count": total,
         "blocking_count": blocking,

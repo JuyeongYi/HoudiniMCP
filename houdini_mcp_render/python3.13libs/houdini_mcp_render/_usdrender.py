@@ -13,7 +13,9 @@ from typing import Any
 
 from pxr import Sdf, UsdGeom, UsdLux, UsdRender, UsdShade
 
-from ._common import writable_dir, expand_path
+from houdini_mcp_base import paths
+
+from ._common import writable_dir
 
 MAX_LISTED = 20
 """예시로 보여줄 프림 개수. 전부 보내면 컨텍스트만 태운다."""
@@ -301,9 +303,9 @@ def render_checks(stage, settings_prim: str | None = None) -> dict[str, Any]:
                 f"karmarendersettings 의 picture 파라미터를 채우세요."
             )
         else:
-            resolved = expand_path(str(name))
+            resolved = paths.to_path(str(name))
             ok, reason = writable_dir(resolved)
-            info["output"] = str(resolved)
+            info["output"] = resolved.as_posix()
             info["output_writable"] = ok
             info["output_note"] = reason
             if not ok:

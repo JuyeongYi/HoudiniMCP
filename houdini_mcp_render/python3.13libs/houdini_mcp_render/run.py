@@ -36,7 +36,9 @@ import hou
 
 from houdini_mcp import tool
 
-from ._common import clip, expand_path, houdini_bin, lop_stage, require_node
+from houdini_mcp_base import paths
+
+from ._common import clip, lop_stage, require_node
 from ._image import summarize
 from ._usdrender import render_checks, resolve_settings, _targets
 from .check import _resolve_lop
@@ -199,7 +201,7 @@ def _expected_outputs(stage, settings_prim: str | None) -> list[str]:
             continue
         name = UsdRender.Product(prim).GetProductNameAttr().Get()
         if name:
-            out.append(str(expand_path(str(name))))
+            out.append(str(paths.to_path(str(name))))
     return out
 
 
@@ -269,7 +271,7 @@ def start_render(
         expected = _expected_outputs(stage, settings_prim)
         source = lop.path()
     else:
-        usd_file = expand_path(target)
+        usd_file = paths.to_path(target)
         if not usd_file.exists():
             raise ValueError(
                 f"노드도 파일도 아닙니다: {target}. LOP 노드 경로(/stage/...)나 "
@@ -284,9 +286,9 @@ def start_render(
         source = str(usd_file)
 
     if output:
-        expected = [str(expand_path(output, frame))]
+        expected = [str(paths.to_path(output, frame))]
 
-    husk = houdini_bin("husk")
+    husk = paths.require_hfs_bin("husk")
     command: list[str] = [
         str(husk),
         str(usd_file),
@@ -415,21 +417,21 @@ def render_status(job: str | None = None, with_stats: bool = True) -> dict[str, 
     candidates = handle.saved or handle.expected
     images: list[dict[str, Any]] = []
     for path_text in candidates[:MAX_STATS_IMAGES if with_stats else MAX_FRAMES_SCANNED]:
-        path = expand_path(path_text)
+        path = paths.to_path(path_text)
         if not path.exists():
             images.append({
-                "file": str(path),
+                "file": path.as_posix(),
                 "missing": True,
                 "note": "husk 는 끝났는데 파일이 없습니다. 출력 경로 권한을 보세요.",
             })
             continue
         if not with_stats:
-            images.append({"file": str(path), "bytes": path.stat().st_size})
+            images.append({"file": path.as_posix(), "bytes": path.stat().st_size})
             continue
         try:
             images.append(summarize(path))
         except Exception as exc:  # noqa: BLE001 - 한 장이 깨져도 나머지는 본다
-            images.append({"file": str(path), "error": clip(str(exc), 300)})
+            images.append({"file": path.as_posix(), "error": clip(str(exc), 300)})
     result["images"] = images
     if len(candidates) > len(images):
         result["more_images"] = len(candidates) - len(images)
@@ -540,7 +542,7 @@ def _rop_outputs(node: hou.RopNode, frames: list[float]) -> list[Path]:
                 continue
             if not value:
                 continue
-            path = expand_path(value, frame)
+            path = paths.to_path(value, frame)
             if path not in seen:
                 seen.append(path)
             break
@@ -614,7 +616,7 @@ def render_rop(
     outputs: list[dict[str, Any]] = []
     inspected = 0
     for candidate in _rop_outputs(node, frames):
-        entry: dict[str, Any] = {"file": str(candidate)}
+        entry: dict[str, Any] = {"file": candidate.as_posix()}
         if not candidate.exists():
             entry["missing"] = True
             entry["note"] = "이 경로에 파일이 만들어지지 않았습니다."

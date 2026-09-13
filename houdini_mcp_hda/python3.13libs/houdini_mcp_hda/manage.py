@@ -95,7 +95,7 @@ def install_hda(file_path: str) -> dict[str, Any]:
         raise ValueError(f"{path} 를 설치하지 못했습니다: {exc}") from exc
 
     return {
-        "file": str(path),
+        "file": path.as_posix(),
         "count": len(definitions),
         "definitions": [_brief(d) for d in _file_definitions(path)],
         "replaces": replaces,
@@ -145,7 +145,7 @@ def uninstall_hda(file_path: str, force: bool = False) -> dict[str, Any]:
         raise ValueError(f"{path} 를 해제하지 못했습니다: {exc}") from exc
 
     return {
-        "file": str(path),
+        "file": path.as_posix(),
         "uninstalled": [d.nodeTypeName() for d in definitions],
         "broken_instances": blocking,
         "forced": bool(blocking and force),
@@ -173,7 +173,7 @@ def reload_hda(file_path: str) -> dict[str, Any]:
 
     definitions = _file_definitions(path)
     return {
-        "file": str(path),
+        "file": path.as_posix(),
         "count": len(definitions),
         "definitions": [
             {**_brief(d), **{"instances": instance_paths(d)["count"]}}

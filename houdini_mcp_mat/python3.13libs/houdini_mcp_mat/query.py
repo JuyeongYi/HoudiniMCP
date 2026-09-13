@@ -18,10 +18,11 @@ import hou
 
 from houdini_mcp import tool
 
+from houdini_mcp_base import paths
+
 from .common import (
     MTLX_RENDER_MASK,
     SUBNET_PLUMBING,
-    expand_path,
     input_connections,
     lop_stage,
     material_kind,
@@ -159,7 +160,7 @@ def _texture_parms(material: hou.VopNode) -> list[dict[str, Any]]:
                     "node": node.path(),
                     "parm": parm.name(),
                     "raw": raw,
-                    "resolved": str(expand_path(parm.eval())),
+                    "resolved": paths.to_path(parm.eval()).as_posix(),
                 }
             )
     return entries
@@ -381,8 +382,8 @@ def validate_material(path: str) -> dict[str, Any]:
     missing_textures = []
     for entry in _texture_parms(material):
         resolved = Path(entry["resolved"])
-        # UDIM 토큰이 든 경로는 그 자체로는 존재하지 않는다. texture_info 가 센다.
-        if "<UDIM>" in entry["raw"] or "<udim>" in entry["raw"]:
+        # 시퀀스·UDIM 토큰이 든 경로는 그 자체로는 존재하지 않는다. texture_info 가 센다.
+        if paths.has_sequence_token(entry["raw"]):
             continue
         if not resolved.is_file():
             missing_textures.append({**entry, "exists": False})

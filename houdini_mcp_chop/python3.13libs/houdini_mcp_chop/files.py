@@ -22,6 +22,7 @@ from typing import Any, Sequence
 import hou
 
 from houdini_mcp import tool, undoable
+from houdini_mcp_base import paths
 
 from . import _common as c
 
@@ -78,10 +79,11 @@ def export_channels(path: str, file_path: str) -> dict[str, Any]:
 
     Args:
         path: CHOP 경로.
-        file_path: 쓸 파일 경로. .clip / .bclip / .bclip.sc
+        file_path: 쓸 파일 경로. .clip / .bclip / .bclip.sc. $HIP 같은 변수를 그대로 쓴다.
     """
     node = c.require_chop(path)
-    target = Path(file_path)
+    paths.require_resolved(file_path)
+    target = paths.to_path(file_path)
     suffix = _suffix_of(target)
     if suffix not in CLIP_SUFFIXES:
         extra = (
@@ -94,8 +96,9 @@ def export_channels(path: str, file_path: str) -> dict[str, Any]:
             f"{target.name}.{extra}"
         )
 
-    target.parent.mkdir(parents=True, exist_ok=True)
+    paths.ensure_parent(target)
     try:
+        # saveClip 은 `$HIP` 원문을 받으면 예외 없이 아무것도 쓰지 않는다(실측).
         node.saveClip(str(target))
     except hou.Error as exc:
         raise ValueError(
@@ -106,7 +109,7 @@ def export_channels(path: str, file_path: str) -> dict[str, Any]:
     tracks = c.cooked_tracks(node)
     return {
         "path": node.path(),
-        "file_path": str(target),
+        "file": paths.describe(file_path),
         "format": suffix,
         "bytes": target.stat().st_size if target.exists() else 0,
         "channels": [track.name() for track in tracks],
@@ -128,21 +131,22 @@ def import_channels(
 
     Args:
         parent: CHOP 네트워크 경로.
-        file_path: 읽을 파일 경로.
+        file_path: 읽을 파일 경로. $HIP 같은 변수를 그대로 쓴다 - File CHOP 에 원문으로 걸린다.
         comment: 이 채널이 무엇인지. 영어로 적는다.
         name: 노드 이름. 생략하면 Houdini 가 정한다.
     """
-    source = Path(file_path)
-    if not source.exists():
+    try:
+        source = paths.require_file(file_path)
+    except ValueError as exc:
         raise ValueError(
-            f"그런 파일이 없습니다: {source}. "
-            f"export_channels 나 export_parm_channels 로 먼저 쓰거나 경로를 확인하세요."
-        )
+            f"{exc} export_channels 나 export_parm_channels 로 먼저 쓰거나 경로를 확인하세요."
+        ) from exc
 
     net = c.require_chop_parent(parent)
-    node = c.build(net, "file", comment, name, {"file": str(source)})
+    # 파라미터에는 원문을 건다. 씬을 옮겨도 `$HIP` 이 풀린다.
+    node = c.build(net, "file", comment, name, {"file": paths.to_parm(file_path)})
     report = c.node_report(node)
-    report["file_path"] = str(source)
+    report["file"] = paths.describe(file_path)
     report["format"] = _suffix_of(source)
     if report["format"] in CHAN_SUFFIXES:
         report["hint"] = (
@@ -169,7 +173,7 @@ def export_parm_channels(
 
     Args:
         parms: 내보낼 파라미터 경로들. 예: ["/obj/cam/tx", "/obj/cam/ty"]
-        file_path: 쓸 파일 경로. .chan 또는 .bchan
+        file_path: 쓸 파일 경로. .chan 또는 .bchan. $HIP 같은 변수를 그대로 쓴다.
         start_frame: 시작 프레임. 생략하면 씬의 전역 시작.
         end_frame: 끝 프레임(포함). 생략하면 씬의 전역 끝.
     """
@@ -179,7 +183,8 @@ def export_parm_channels(
             "list_animated_parms 가 어느 파라미터에 애니메이션이 있는지 알려 줍니다."
         )
 
-    target = Path(file_path)
+    paths.require_resolved(file_path)
+    target = paths.to_path(file_path)
     if _suffix_of(target) not in CHAN_SUFFIXES:
         raise ValueError(
             f"파라미터 채널 확장자는 {', '.join(CHAN_SUFFIXES)} 중 하나여야 합니다: "
@@ -187,7 +192,7 @@ def export_parm_channels(
         )
 
     resolved = [c.resolve_parm(ref) for ref in parms]
-    target.parent.mkdir(parents=True, exist_ok=True)
+    paths.ensure_parent(target)
 
     playback = hou.playbar.frameRange()
     first = float(playback[0]) if start_frame is None else float(start_frame)
@@ -199,7 +204,7 @@ def export_parm_channels(
     )
 
     return {
-        "file_path": str(target),
+        "file": paths.describe(file_path),
         "format": _suffix_of(target),
         "bytes": target.stat().st_size if target.exists() else 0,
         "columns": [parm.path() for parm in resolved],
@@ -227,13 +232,11 @@ def import_parm_channels(
 
     Args:
         parms: 받을 파라미터 경로들. 컬럼 순서와 같아야 한다.
-        file_path: 읽을 파일 경로. .chan 또는 .bchan
+        file_path: 읽을 파일 경로. .chan 또는 .bchan. $HIP 같은 변수를 그대로 쓴다.
         start_frame: 넣을 구간 시작 프레임. 생략하면 씬의 전역 시작.
         end_frame: 끝 프레임(포함). 생략하면 씬의 전역 끝.
     """
-    source = Path(file_path)
-    if not source.exists():
-        raise ValueError(f"그런 파일이 없습니다: {source}")
+    source = paths.require_file(file_path)
     if _suffix_of(source) not in CHAN_SUFFIXES:
         raise ValueError(
             f"이 툴은 {', '.join(CHAN_SUFFIXES)} 만 읽습니다: {source.name}. "
@@ -263,7 +266,7 @@ def import_parm_channels(
     ]
     empty = [entry["parm"] for entry in loaded if entry["keyframes"] == 0]
     return {
-        "file_path": str(source),
+        "file": paths.describe(file_path),
         "format": _suffix_of(source),
         "frame_range": [first, last],
         "count": len(loaded),

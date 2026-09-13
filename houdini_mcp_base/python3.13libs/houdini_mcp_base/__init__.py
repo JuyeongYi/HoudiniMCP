@@ -25,6 +25,8 @@
 
     parmtemplate  hou.ParmTemplate 을 만드는 공통 헬퍼. parmedit 과
                   houdini_mcp_hda 가 함께 쓴다
+    paths         경로 전개·원문 보존·시퀀스·$HFS. 경로를 다루는 팩은 전부
+                  이것을 쓰고 자기 헬퍼를 두지 않는다
 
 특정 컨텍스트에만 의미가 있는 툴은 전용 팩(houdini_mcp_sop 등)으로 분리한다.
 

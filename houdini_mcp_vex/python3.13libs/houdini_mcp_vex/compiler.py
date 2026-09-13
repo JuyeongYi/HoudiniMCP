@@ -27,7 +27,6 @@ Houdini 22.0.368 에서 실측한 것:
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -63,42 +62,34 @@ _context_json: dict[str, dict[str, Any]] = {}
 # ---- vcc 찾기 ---------------------------------------------------------
 
 
-def _houdini_bin() -> Path:
-    """$HFS/bin. 경로를 하드코딩하지 않고 환경에서 얻는다."""
-    hfs = os.environ.get("HFS")
-    if not hfs:
-        # Houdini 안이면 환경변수가 늘 있지만, 없더라도 hou 로 한 번 더 본다.
-        import hou
-
-        hfs = hou.text.expandString("$HFS")
-    if not hfs:
-        raise RuntimeError(
-            "$HFS 를 찾지 못했습니다. Houdini 설치 경로를 알 수 없으면 VEX 를 "
-            "컴파일할 수 없습니다. HFS 환경변수를 설정한 뒤 Houdini 를 다시 "
-            "띄우세요."
-        )
-    return Path(hfs) / "bin"
-
-
 def vcc_path() -> Path:
-    """vcc 실행 파일 경로. 확장자는 플랫폼이 정하게 둔다.
-
-    shutil.which 는 Windows 에서 PATHEXT 를 봐서 vcc.exe 를 찾아 준다. 그래서
-    ".exe" 를 손으로 붙이지 않는다.
-    """
+    """vcc 실행 파일 경로. `$HFS/bin` 을 먼저, 없으면 PATH 를 본다."""
     global _vcc_path
     if _vcc_path is not None:
         return _vcc_path
 
-    bindir = _houdini_bin()
-    found = shutil.which("vcc", path=str(bindir)) or shutil.which("vcc")
+    # base 헬퍼는 hou 를 import 한다. 진단 파서는 hou 없이도 읽혀야 하므로
+    # 여기서만 부른다.
+    from houdini_mcp_base import paths
+
+    found = paths.hfs_bin("vcc")
+    if found is None:
+        on_path = shutil.which("vcc")
+        found = Path(on_path) if on_path else None
     if found is None:
         raise RuntimeError(
-            f"VEX 컴파일러(vcc)를 {bindir} 에서도 PATH 에서도 찾지 못했습니다. "
-            f"Houdini 설치가 온전한지 확인하세요."
+            f"VEX 컴파일러(vcc)를 $HFS/bin 에서도 PATH 에서도 찾지 못했습니다 "
+            f"({paths.expand('$HFS') or '$HFS 없음'}). Houdini 설치가 온전한지 확인하세요."
         )
-    _vcc_path = Path(found)
+    _vcc_path = found
     return _vcc_path
+
+
+def _include_dir(raw: str) -> str:
+    """`-I` 에 넘길 디렉토리. `$HIP` 같은 변수를 풀고, 없으면 먼저 알린다."""
+    from houdini_mcp_base import paths
+
+    return str(paths.require_dir(raw))
 
 
 def _spawn_options() -> dict[str, Any]:
@@ -206,7 +197,7 @@ def compile_source(
 
         args = ["-c", context, "-o", str(work / "check.vex")]
         for directory in include_dirs or ():
-            args += ["-I", str(Path(directory))]
+            args += ["-I", _include_dir(directory)]
         args.append(str(source_file))
         proc = run_vcc(args)
 

@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import hou
@@ -183,17 +182,6 @@ def connector_names(node: hou.VopNode) -> dict[str, Any]:
             for i, name in enumerate(outputs)
         ],
     }
-
-
-# ---- 경로 ------------------------------------------------------------
-
-
-def expand_path(raw: str) -> Path:
-    """$HIP 같은 Houdini 변수를 펼쳐 Path 로 만든다.
-
-    문자열을 손으로 조립하지 않는다. 구분자는 Path 가 알아서 맞춘다.
-    """
-    return Path(hou.text.expandString(raw))
 
 
 def set_comment(node: hou.Node, comment: str) -> None:

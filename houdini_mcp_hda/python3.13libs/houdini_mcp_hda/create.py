@@ -212,7 +212,7 @@ def save_as_hda(
     ]
     return {
         "source": definition_summary(definition),
-        "hda_file": str(dest),
+        "hda_file": dest.as_posix(),
         "new_type_name": new_name,
         "renamed": renaming,
         "installed": install,

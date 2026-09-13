@@ -21,17 +21,15 @@ import hou
 
 from houdini_mcp import tool, undoable
 
+from houdini_mcp_base import paths
+
 from ._common import (
     NATIVE_FORMATS,
     SCENE_SUFFIXES,
     USD_SUFFIXES,
-    expand,
-    file_stat,
     geometry_summary,
     require_comment,
     require_node,
-    resolve_files,
-    run_hfs_tool,
     set_comment,
     suffix_of,
     truncate,
@@ -127,17 +125,17 @@ def _probe_usd(target: Path, detail: bool) -> dict[str, Any]:
 
 
 def _probe_alembic(target: Path, detail: bool) -> dict[str, Any]:
-    from .export import _parse_abcinfo  # 파싱 규칙을 한 곳에만 둔다
+    from .interchange import parse_abcinfo  # 파싱 규칙을 한 곳에만 둔다
 
     args = ["-o", "-b", str(target)]
     if detail:
         args = ["-o", "-b", "-g", "-f", str(target)]
-    info = run_hfs_tool("abcinfo", args)
+    info = paths.run_hfs_tool("abcinfo", args)
     if not info.get("available"):
         return {"opened": False, "error": info.get("reason")}
     if not info.get("ok"):
         return {"opened": False, "error": f"abcinfo 실패: {info.get('stderr', '')[:300]}"}
-    parsed = _parse_abcinfo(info.get("stdout", ""))
+    parsed = parse_abcinfo(info.get("stdout", ""))
     result: dict[str, Any] = {"opened": True, **parsed}
     if detail:
         result["abcinfo"] = info.get("stdout", "")[:4000]
@@ -207,10 +205,10 @@ def probe_file(file_path: str, detail: bool = False) -> dict[str, Any]:
             어트리뷰트와 페이스셋까지). 느려진다.
     """
     raw = file_path
-    files, is_sequence = resolve_files(raw)
+    files, is_sequence = paths.resolve_files(raw)
     result: dict[str, Any] = {
         "requested": raw,
-        "resolved": str(Path(expand(raw))),
+        "resolved": paths.to_path(raw).as_posix(),
         "sequence": is_sequence,
     }
     if is_sequence:
@@ -229,9 +227,9 @@ def probe_file(file_path: str, detail: bool = False) -> dict[str, Any]:
 
     target = files[0]
     kind = _classify(target)
-    result.update({"exists": True, "kind": kind, "suffix": suffix_of(target), **file_stat(target)})
+    result.update({"exists": True, "kind": kind, "suffix": suffix_of(target), **paths.file_stat(target)})
     if is_sequence:
-        result["probed"] = str(target)
+        result["probed"] = target.as_posix()
 
     if kind == "usd":
         result["content"] = _probe_usd(target, detail)
@@ -304,14 +302,14 @@ def import_geometry(
     require_comment(comment)
     parent_node = require_node(parent)
 
-    files, is_sequence = resolve_files(file_path)
+    files, is_sequence = paths.resolve_files(file_path)
     if not files and not is_sequence:
         raise ValueError(
-            f"그런 파일이 없습니다: {Path(expand(file_path))}. "
+            f"그런 파일이 없습니다: {paths.to_path(file_path).as_posix()}. "
             f"probe_file 로 경로가 제대로 풀리는지 먼저 확인하세요."
         )
 
-    suffix = suffix_of(files[0] if files else Path(expand(file_path)))
+    suffix = suffix_of(files[0] if files else paths.to_path(file_path))
     sop_type = READER_SOPS.get(suffix, "file")
 
     category = parent_node.childTypeCategory()
@@ -338,7 +336,7 @@ def import_geometry(
             f"{host.path()} 안에 {sop_type!r} 노드를 만들지 못했습니다: {exc}"
         ) from exc
 
-    reader.parm(READER_FILE_PARM[sop_type]).set(file_path)
+    reader.parm(READER_FILE_PARM[sop_type]).set(paths.to_parm(file_path))
     set_comment(reader, comment)
     reader.setDisplayFlag(True)
     reader.setRenderFlag(True)
@@ -355,7 +353,7 @@ def import_geometry(
         "comment": reader.comment(),
         "container": container.path() if container is not None else None,
         "file": file_path,
-        "resolved": str(files[0]) if files else None,
+        "resolved": files[0].as_posix() if files else None,
         "sequence": is_sequence,
         "file_count": len(files) if is_sequence else None,
     }
@@ -409,7 +407,8 @@ def import_scene(
         overwrite_on_conflict: 같은 경로의 노드를 덮어쓴다. 되돌리기 어려우므로
             명시적으로 요구한다.
     """
-    target = Path(expand(file_path))
+    # hou.hipFile 은 `$HIP` 원문을 받지 않는다(실측).
+    target = paths.to_path(file_path)
     if not target.is_file():
         raise ValueError(
             f"그런 파일이 없습니다: {target}. 경로와 확장자(.hip/.hipnc/.hiplc)를 확인하세요."
@@ -439,7 +438,7 @@ def import_scene(
         if after[network] != before.get(network, 0)
     }
     return {
-        "file": str(target),
+        "file": target.as_posix(),
         "node_pattern": node_pattern,
         "added": added,
         "total_added": sum(added.values()),

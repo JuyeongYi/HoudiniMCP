@@ -17,7 +17,9 @@ from typing import Any
 
 from houdini_mcp import tool
 
-from ._common import clip, houdini_bin, lop_stage, require_lop
+from houdini_mcp_base import paths
+
+from ._common import clip, lop_stage, require_lop
 from ._usdrender import (
     describe_settings,
     find_settings_prims,
@@ -69,7 +71,7 @@ def list_renderers() -> dict[str, Any]:
     if _RENDERERS_CACHE is not None:
         return _RENDERERS_CACHE
 
-    husk = houdini_bin("husk")
+    husk = paths.require_hfs_bin("husk")
     try:
         proc = subprocess.run(
             [str(husk), "--list-renderers"],

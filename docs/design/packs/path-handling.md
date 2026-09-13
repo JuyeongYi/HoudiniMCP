@@ -1,184 +1,115 @@
-# 핸드오프 — 경로 헬퍼를 base 로 올리고 팩에서 지운다
+# 경로 헬퍼를 base 로 올렸다
 
-> 상태: **착수 전.** 이 문서 하나만 읽고 시작할 수 있게 썼다.
-> 먼저 [README.md](README.md) 의 다섯 원칙과 프로젝트 `CLAUDE.md` 를 읽는다.
+> 상태: **완료 (2026-09-13).** 핸드오프로 시작한 문서다. 작업하면서 실측이
+> 핸드오프의 전제를 여럿 뒤집어, 무엇을 했고 무엇이 드러났는지의 기록으로
+> 다시 썼다. 경로 코드를 고치기 전에 이 문서와
+> `houdini_mcp_base/paths.py` 의 모듈 docstring 을 읽는다.
 
-## 왜
+## 규칙
 
-팩을 열한 개 만들고 보니 **경로를 푸는 코드가 다섯 팩에 따로 있다.** 이름도
-다르고 동작도 다르다. 어느 하나도 필요한 일을 다 하지 못한다.
+경로를 다루는 코드는 **`houdini_mcp_base.paths` 에만 있다.** 팩은 자기 경로
+헬퍼를 두지 않는다. 툴이 아니라 헬퍼라 `TOOL_MODULES` 에는 없다.
 
-| 자리 | 이름 | 갖고 있는 것 | 없는 것 |
-|---|---|---|---|
-| `io/_common.py:93` | `expand` / `to_path` | 실패 관용, 시퀀스 토큰 | 프레임, `~` |
-| `mat/common.py:191` | `expand_path` | — | 전부 |
-| `render/_common.py:76` | `expand_path(path, frame)` | 프레임 | 실패 관용, `~`, 시퀀스 |
-| `hda/_common.py:184,197`, `vcs.py:121` | (인라인) | **`~` (유일)** | 나머지 전부 |
-| `lop/composition.py` | (인라인) | — | 전부 |
+| 할 일 | 쓸 것 |
+|---|---|
+| 노드 파라미터·hscript 인자에 넣는다 | `to_parm(raw)` — 변수 보존, 슬래시 |
+| 파이썬 파일 조작·HOM 호출에 넘긴다 | `to_path(raw)` — 전개한 Path |
+| 쓰기 전에 | `require_resolved(raw)`, `prepare_output(raw, overwrite)`, `ensure_parent(path)` |
+| 읽기 전에 | `require_file(raw)`, `require_dir(raw)` — 없으면 같은 디렉토리의 이름을 보여 준다 |
+| 툴 응답에 싣는다 | `describe(raw)` 를 `"file"` 같은 키 아래에. 전개판은 `.as_posix()` |
+| 모은 파일을 다시 건다 | `portable(raw)` — 변수가 있으면 그대로, 절대 경로면 `$HIP`/`$JOB` 으로 접기 |
+| 시퀀스·UDIM | `has_sequence_token`, `sequence_glob`, `resolve_files` |
+| `$HFS/bin` 실행 파일 | `hfs_bin`, `require_hfs_bin`, `run_hfs_tool` |
 
-그래서 `~/out.exr` 은 hda 에서만 열리고 `$F4` 는 render 에서만 맞는다.
-합집합이 아니라 각자 자기한테 필요한 조각만 갖고 있다.
+하지 않는다:
 
-`$HFS` 조회도 셋으로 갈라져 있다 — `base/nodetypes.py:165`,
-`render/_common.py`, `vex/compiler.py`. vex 는 `vcc`, render 는 `husk`,
-io 는 `abcinfo` 를 찾으려고 같은 일을 한다.
+- 사용자가 준 경로를 `Path(raw)` 로 만들어 파일시스템을 만진다
+- `.expanduser()` 를 부른다
+- `hou.text.expandString` 을 paths 밖에서 부른다
+- 응답이나 파라미터에 `str(Path)` 를 넣는다 — Windows 에서 역슬래시가 된다
 
-전역 `CLAUDE.md` 의 코드 스멜 ② "같은 로직 3곳 복제" 다.
+## 실측이 핸드오프를 뒤집은 것
 
-**곁다리로 같이 고칠 것**: `base/nodetypes.py:165` 가
-`expandString("$HFS").replace("\\", "/")` 로 구분자를 손으로 바꾼다.
-프로젝트 `CLAUDE.md` 의 멀티플랫폼 규칙 위반이다. `Path` 를 쓰면 없어진다.
+| 핸드오프의 전제 | 실측 |
+|---|---|
+| `~` 는 hda 에서만 풀린다 | `expandString` 이 이미 푼다. 대신 **Houdini 의 `~` 는 `$HOME`** 이고, Windows 에서 HOME 이 없으면 Houdini 가 `Documents` 로 잡아 파이썬 `Path.home()` 과 갈라진다. `.expanduser()` 를 섞으면 같은 `~` 가 두 폴더가 된다 |
+| io 의 `expand` 는 실패하면 원문을 돌려준다 | 그 `except` 는 한 번도 안 걸린다. `expandString` 은 예외를 던지지 않고 **모르는 변수를 빈 문자열로 지운다** |
+| `nodetypes._origin` 이 `$HFS` 짧은 이름 때문에 틀릴 수 있다 | 아니다. `libraryFilePath()` 도 짧은 이름을 준다. 구분자를 손으로 바꾸던 스타일 위반만 고쳤다 |
+| 응답을 `{"path", "resolved", "exists"}` 로 맞춘다 | 이미 많은 툴이 `"path"` 를 노드 경로로 쓴다. `"file": {...}` 처럼 감싼다 |
+| 대상은 다섯 팩(io, mat, render, hda, lop) | **열 곳**이었다. base(cache, scene, nodetypes), dop, chop, sop, vex 가 더 있었다 |
 
-## 무엇을 만드나
+## 드러난 조용한 실패
 
-### 1단계 — `houdini_mcp_base/paths.py`
+전부 예외 없이 틀리던 것이다. "실측" 은 고치기 전 코드로 증상을 재현한 것,
+"코드" 는 코드를 읽어 확인하고 고친 뒤의 동작만 실측한 것이다.
 
-**io 의 `_common.py` 가 이미 거의 완성품이다.** 79~200줄과 370~420줄,
-477~490줄이 경로 구역이고, 이것을 base 로 옮기는 것이 작업의 뼈대다.
-처음부터 새로 쓰지 않는다.
+| # | 무엇 | 어디서 | 증상 | 근거 |
+|---|---|---|---|---|
+| 1 | 원문을 `Path` 로 만들어 mkdir | base `write_cache` | cwd 에 `$HIP\geo` 폴더가 생기고, 파라미터에 역슬래시 경로가 들어가 **굽기가 실패**하고, "쓸 권한을 확인하라" 는 엉뚱한 안내 | 실측 |
+| 2 | 같은 것 | dop `write_sim_cache`, `sim_cache_status` | 시뮬은 진짜 `$HIP/sim` 에 써졌는데 가짜 폴더를 뒤져 **`files_written: 0` 과 "디스크 공간을 확인하라"** 는 거짓 보고 | 실측 |
+| 3 | 같은 것 | chop `export_channels` 등 4개, `load_audio`, sop `export_attribute` | cwd 에 쓰거나 없는 파일로 판정. `load_audio` 는 docstring 에 "$HIP 을 펼친 절대 경로를 주세요" 라고 우회법을 적어 두었다 | 코드 |
+| 4 | `expandString` 이 역슬래시를 이스케이프로 읽는다 | 전개하는 모든 곳 | `C:\tmp\$F4.exr` 는 `C:\tmp$F4.exr`, UNC `\\server\share` 는 `\server\share` | 실측 |
+| 5 | 역슬래시 경로를 ROP 파라미터에 | io `export_alembic`·`export_fbx` 의 `str(target)` | ROP 쓰기가 실패한다(Apprentice 라 이 두 툴은 돌려 보지 못했다) | API 실측 + 코드 |
+| 6 | `$HIP` 원문을 HOM 에 | base `save_scene`·`load_scene`, chop `export_channels` | `hipFile.save/load` 실패, **`saveClip` 은 예외 없이 아무것도 안 쓴다** | API 실측 + 코드 |
+| 7 | 모르는 변수가 빈 문자열 | 쓰는 모든 곳 | `$NOPE/cache/x` 가 `/cache/x` 로 풀려 루트에 쓴다 | 실측 |
+| 8 | `$FPS` `$FSTART` 를 프레임 토큰으로 | io `\$F\d*`, dop `\$S?F\d*` 와 `"$F" in pattern` 검사 | `x.$FPS.txt` 를 시퀀스로 오인. Houdini 는 변수 이름을 끝까지 읽는다(`$F_b` 는 한 변수) | 실측 |
+| 9 | relink 가 전개된 절대 경로를 파라미터에 | io `collect_dependencies` | 모은 씬을 다른 기계로 옮기면 다시 깨진다 - 모으는 목적이 사라진다 | 코드 |
+| 10 | UDIM 을 `*` 로 글롭 | io | `tex.abcd.exr` 까지 타일로 센다. mat 은 네 자리로 맞게 하고 있었다 | 코드 |
+| 11 | 디렉토리 이름의 `[` | io, mat, dop | 글롭 문자로 읽힌다 | 코드 |
+| 12 | include 디렉토리를 전개하지 않음 | vex `validate_vex(include_dirs=)` | `$HIP/vexinc` 가 안 풀린다 | 코드 |
 
-옮길 것:
+`$HIP` 을 그대로 받는지는 API 마다 다르다(실측). ROP 파라미터(슬래시)·hscript
+`chwrite`·`createDigitalAsset`·`hda.definitionsInFile` 은 받고, ROP 파라미터(역슬래시)·
+`hipFile.save/load`·`saveClip` 은 받지 않는다. 외워 둘 수 없으므로 HOM 에는 늘
+전개판을 넘긴다.
 
-```
-SEQUENCE_TOKENS      $FF $F\d* <UDIM> <udim> <UVTILE> <uvtile> %(UDIM)d %0?\d*d
-MAX_SEQUENCE_FILES   5000
-expand               hou.Error 를 잡아 원문 반환
-to_path              expand + Path
-has_sequence_token
-sequence_pattern     토큰을 * 로 바꾼 뒤 전개 (순서가 중요하다, 아래 함정 참고)
-resolve_files        참조 하나가 실제로 가리키는 파일들 + 시퀀스 여부
-file_stat            존재·크기·수정시각
-require_absent       덮어쓰기 방지. base 의 save_scene 과 같은 규약
-prepare_output       출력 경로 확정 + 부모 디렉토리 생성
-is_inside            경로 포함 관계
-hfs_bin              $HFS/bin 의 실행 파일. win32 면 .exe 를 먼저 본다
-run_hfs_tool         $HFS/bin CLI 실행
-env_paths            os.pathsep 으로 가른다
-```
+## 옮긴 자리
 
-**여기에 두 가지를 더한다** — 지금 어느 한 곳에만 있는 것들이다.
-
-```python
-def expand(raw: str, frame: float | None = None) -> str:
-    """frame 을 주면 expandStringAtFrame. ~ 도 푼다."""
-```
-
-- `frame` — render 의 `expand_path(path, frame)` 에서 가져온다.
-  `hou.text.expandStringAtFrame(text, float(frame))`
-- `~` — hda 의 `.expanduser()`. `Path(...).expanduser()` 를
-  `to_path` 안으로 넣는다
-
-그리고 render 의 `require_file` 도 올린다. 없는 파일일 때 **같은 디렉토리의
-다른 파일 이름을 최대 8개 보여 준다** — 프로젝트 `CLAUDE.md` 의 "실패는
-다음에 무엇을 할지 알려 준다" 를 가장 잘 지키는 코드라 팩 하나에 두기 아깝다.
-
-**툴이 아니라 헬퍼다. `TOOL_MODULES` 에 넣지 않는다.** `parmtemplate.py` 와
-같은 자리다 — `houdini_mcp_base/__init__.py` 의 docstring 에 "툴이 없는
-모듈" 절이 이미 있으니 거기 한 줄 더한다.
-
-### 2단계 — 팩에서 지운다
-
-| 팩 | 지울 것 | 바꿀 호출 지점 |
+| 팩 | 지운 것 | 지금 |
 |---|---|---|
-| `io` | `_common.py` 의 경로 구역 전체 | 21곳 (`check.py` 1, `deps.py` 6, `export.py` 2, `load.py` 5, `_common.py` 7) |
-| `mat` | `common.py:191` `expand_path` | 7곳 (`preset.py` 3, `query.py` 1, `texture.py` 3) |
-| `render` | `_common.py:76,90` `expand_path` / `require_file` | 15곳 (`result.py` 8, `run.py` 5, `_usdrender.py` 1, `_common.py` 1) |
-| `hda` | 인라인 3곳 | `_common.py:184,197`, `vcs.py:121` |
-| `lop` | 인라인 2곳 | `composition.py` |
-| `base` | `nodetypes.py:165` 의 `$HFS` + `.replace` | `hfs_bin` 또는 `to_path("$HFS")` |
-| `vex` | `compiler.py` 의 `$HFS` 조회 | `hfs_bin("vcc")` |
+| base | `cache` 의 `Path(file_path)`, `scene` 의 `Path(path)`, `nodetypes` 의 구분자 치환 | 파라미터엔 원문, 디렉토리는 전개판으로. 응답에 `"file": describe(...)` |
+| io | `_common.py` 의 경로 구역 전체(expand, to_path, 시퀀스, file_stat, prepare_output, is_inside, hfs_bin, run_hfs_tool, env_paths) | `paths` 를 쓴다. relink 는 `portable` |
+| mat | `common.expand_path`, `texture` 의 UDIM 토큰·글롭 | `paths.UDIM_TOKENS`, `resolve_files` |
+| render | `_common` 의 `expand_path`·`require_file`·`houdini_bin` | `paths.to_path`·`require_file`·`require_hfs_bin`. `houdini_mcp_render.json` 에 base requires 추가 |
+| hda | 인라인 `expandString(...).expanduser()` 3곳 | `paths.to_path`, 쓰는 자리는 `require_resolved` |
+| lop | 인라인 `expandString` 2곳 | `paths.require_file`, 파라미터엔 `to_parm` |
+| dop | `_houdini_path`, `_FRAME_VAR`, `_glob_written`, `expanduser` | `paths.resolve_files`, `FRAME_TOKENS` |
+| chop | `Path(file_path)` 5곳 | `require_file`/`prepare`, File CHOP 파라미터엔 원문 |
+| sop | `export_attribute` 의 `Path(file_path)` | 원문에서 확장자를 고치고 전개판에 쓴다 |
+| vex | `_houdini_bin` 의 `os.environ` 조회, include 의 `Path(directory)` | `paths.hfs_bin`, `require_dir` |
 
-`.json` 의 `requires` 에 `houdini_mcp_base` 가 있는지 확인한다. 없으면
-더한다 — `houdini_mcp_hda.json` 이 이미 그렇게 하고 있으니 본뜬다.
+응답에 싣던 `str(Path)` 도 hda·mat·render·io·base 에서 `.as_posix()` 로 바꿨다.
 
-io 의 `_common.py` 는 484줄이고 경로 구역이 빠지면 300줄쯤 된다. 같은 팩의
-`export.py` 가 **765줄로 경계에 35줄 남았으니** 이 작업에 얹어 함께 쪼갠다.
+## 함께 한 것
 
-### 3단계 — 변수를 살려서 주고받는다
-
-**여기가 이 작업의 본론이다.** 1·2단계는 중복 제거일 뿐이다.
-
-지금 툴들은 경로를 받자마자 전개하고 **전개된 절대 경로를 돌려준다.**
-`$HIP/cache/wall.bgeo.sc` 가 `C:/Users/Jooyo/proj/cache/wall.bgeo.sc` 로
-나간다. 그러면:
-
-- 모델이 그 값을 다른 툴에 다시 넣을 때 **기계에 박힌 경로**를 넣는다
-- 씬을 다른 기계로 옮기면 깨진다. io 의 `remap_paths` 가 하는 일이 정확히
-  이것을 `$HIP` 상대로 되돌리는 것이다 — **애초에 안 풀었으면 되돌릴 일도
-  없다**
-- `hou.fileReferences()` 는 **미전개 문자열**을 준다(io 실측). Houdini
-  자신이 변수 형태를 정본으로 들고 있는데 우리만 풀어서 버린다
-
-규칙:
-
-**입력** — `$HIP` / `$JOB` / `$F4` / `<UDIM>` / `~` 를 그대로 받는다.
-전개는 파일시스템을 실제로 만지는 순간에만 한다. 경로를 받는 툴의 docstring
-에 "변수를 그대로 써도 된다" 를 적는다.
-
-**출력** — 셋을 함께 준다.
-
-```json
-{
-  "path": "$HIP/cache/wall.bgeo.sc",
-  "resolved": "C:/Users/Jooyo/proj/cache/wall.bgeo.sc",
-  "exists": true
-}
-```
-
-`path` 가 정본이고 모델이 다음 툴에 넣을 것이다. `resolved` 는 "내가 실제로
-어디를 봤는가" 이지 **파라미터에 다시 꽂으라고 주는 값이 아니다.**
-docstring 에 그렇게 적는다.
-
-**노드 파라미터에 걸 때는 미전개판을 쓴다.** 이게 이 작업의 성패다.
-
-이미 `"resolved"` 키를 쓰는 자리가 셋 있다(`io/load.py:213`,
-`mat/query.py:162`, `mat/texture.py:413`). 같은 모양으로 맞춘다.
-
-## 함정 — 실측으로 확인된 것
-
-이미 값을 치른 것들이다. 다시 밟지 않는다.
-
-- **`sequence_pattern` 은 토큰 치환이 전개보다 먼저다.** 전개를 먼저 하면
-  `$F4` 가 현재 프레임 숫자로 굳는다. io 의 주석에 이유가 적혀 있으니
-  옮길 때 주석도 같이 옮긴다.
-- **`hou.text.expandStringAtFrame` 은 `$SF` 를 모른다** — 빈 문자열로
-  푼다(dop 실측). `$F` 와 `$SF` 가 섞이는 자리는 글롭으로 가야 한다.
-  이 차이를 뭉개지 말고 함수로 드러낸다.
-- **`<UDIM>` 은 `expandString` 이 전개하지 않고 그대로 둔다**(io 실측).
-  `$F4` 와 동작이 다르다. 둘 다 `SEQUENCE_TOKENS` 가 잡는다.
-- **Houdini 설치(`$HFS`) 안의 파일은 `hou.fileReferences()` 목록에서 통째로
-  빠진다**(io 실측). 의존성 수집이 이것에 기댄다.
-- **`hou.hipFile.collisionFreeName` 은 없다**(io 실측).
+- **`io/export.py` 분해.** 761줄이라 경계에 닿아 있었다. 포맷별로 나눴다 -
+  `export.py`(네이티브·`export_formats`, 227) / `usd.py`(324) /
+  `interchange.py`(Alembic·FBX, 268). `load.py` 가 가져가던 `_parse_abcinfo` 는
+  `interchange.parse_abcinfo` 로 공개했다.
+- **테스트 모듈 이름 충돌.** 테스트마다 `tests/<팩>/scenario.py` 를 두는데
+  `from scenario import MARKER` 로 읽으면 먼저 수집된 쪽이 `sys.modules` 를
+  차지한다. rig 가 한 번 밟고 자기 파일만 고쳤는데, 이번에 추가한
+  `tests/paths` 가 같은 방식이라 알파벳 순으로 sop 보다 먼저 수집되며 sop
+  17개가 다시 깨졌다. paths 와 sop 둘 다 전용 이름으로 `importlib` 로드한다.
 
 ## 검증
 
-```bash
-hython -c "from houdini_mcp import get_registry; import collections; \
-  print(collections.Counter(s.package for s in get_registry().all()))"
-python -m pytest tests -q
-python -m pyflakes houdini_mcp_*/python3.13libs/
-wc -l houdini_mcp_*/python3.13libs/houdini_mcp_*/*.py | sort -rn | head
-```
+- `tests/paths` 32개 신설 — 위 조용한 실패를 하나씩 못 박는다
+- 전체 117 passed, 9 skipped
+- 등록 툴 이름 277개가 작업 전후 **완전히 같다** — 리팩토링이 툴을 더하거나 빼지 않았다
+- 통합 검증 세 묶음(io·sop·chop / dop·lop·vex·hda / mat·render)을 `$HIP` 경로로
+  실제 호출. 격리한 현재 디렉토리에 새는 것 0. 주요 확인:
+  - `write_cache("$HIP/geo/x")` 가 구워지고 파라미터에 원문이 걸린다
+  - `write_sim_cache("$HIP/sim")` 가 `files_written: 3`
+  - `collect_dependencies` 가 절대 경로로 걸린 참조까지 `$HIP/collected/...` 로 되돌린다
+  - `$HMCP_NOPE/...` 경로는 노드 하나 남기지 않고 거절한다
+- `export_usd` 를 HEAD 코드와 현재 코드로 같은 입력에 돌려 결과가 같다
 
-기준선: 팩별 툴 수가 **하나도 변하지 않아야 한다.** 이 작업은 리팩토링이고
-툴을 더하거나 빼지 않는다. 테스트는 현재 기준선을 유지한다. 800줄 초과 0.
+## 남은 것
 
-그리고 실제로 돌려 본다.
-
-```
-$HIP / $JOB / $F4 / <UDIM> / ~ 를 각각 넣어
-→ 전개 결과가 hou.text.expandString 과 같은가
-→ 없는 변수를 넣었을 때 예외가 아니라 원문이 오는가
-→ 돌려받은 path 를 그대로 다른 툴에 넣어 도는가
-→ 노드 파라미터에 걸린 값이 전개판이 아니라 변수 형태인가
-```
-
-**마지막 항목이 핵심이다.** 이것이 되면 씬을 다른 기계로 옮길 수 있다.
-
-## 하지 않을 것
-
-- 경로를 다루는 **새 툴**을 만들지 않는다. 헬퍼만 옮긴다
-- 전개 규칙을 우리가 새로 정하지 않는다. `hou.text.expandString` 이
-  하는 그대로를 따른다 — 진단이 Houdini 와 어긋나면 쓸모가 없다
-  (vex 팩이 타입 추론에서 같은 판단을 했다)
-- 팩의 `.json` 이름·구조를 건드리지 않는다
+- `houdini_mcp_mat/color.py` 가 `$OCIO` 를 `expandString` 으로 읽는다. 경로를
+  만지지 않고 보여 주기만 해서 두었다.
+- `houdini_mcp/logs.py` 의 `$HOUDINI_USER_PREF_DIR` 는 서버 패키지라 팩 규칙
+  밖이다.
+- 테스트의 `_run_scenario` 가 sop·chop·rig·paths 네 곳에 복제돼 있다. 위 충돌도
+  이 복제에서 났다. 하네스로 올릴 리팩토링 항목이다.

@@ -14,13 +14,13 @@ hou API 레퍼런스: https://www.sidefx.com/docs/houdini/hom/hou/index.html
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import hou
 import numpy
 
 from houdini_mcp import tool, undoable
+from houdini_mcp_base import paths
 
 from . import _common as c
 
@@ -64,23 +64,18 @@ def load_audio(
 
     Args:
         parent: CHOP 네트워크 경로. create_chop_network 가 돌려준 것.
-        file_path: 오디오 파일 경로. .wav 를 확인했다.
+        file_path: 오디오 파일 경로. .wav 를 확인했다. $HIP 같은 변수를 그대로 쓴다.
         comment: 이 오디오가 무엇인지. 영어로 적는다.
         name: 노드 이름. 생략하면 Houdini 가 정한다.
         envelope_points: 포락선 점 수. 기본 64
         set_audio_flag: True 면 이 CHOP 을 씬의 오디오 소스로 지정한다.
     """
-    source = Path(file_path)
-    if not source.exists():
-        raise ValueError(
-            f"그런 파일이 없습니다: {source}. "
-            f"경로를 확인하거나 $HIP 을 펼친 절대 경로를 주세요."
-        )
+    source = paths.require_file(file_path)
     if envelope_points < 1:
         raise ValueError(f"envelope_points 는 1 이상이어야 합니다: {envelope_points}")
 
     net = c.require_chop_parent(parent)
-    node = c.build(net, "file", comment, name, {"file": str(source)})
+    node = c.build(net, "file", comment, name, {"file": paths.to_parm(file_path)})
 
     tracks = c.cooked_tracks(node)
     if not tracks:
@@ -117,7 +112,7 @@ def load_audio(
         "name": node.name(),
         "type": node.type().name(),
         "comment": node.comment(),
-        "file_path": str(source),
+        "file": paths.describe(file_path),
         "sample_rate": rate,
         "samples": int(count),
         "duration_seconds": round(count / rate, 6) if rate else None,

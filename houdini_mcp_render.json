@@ -1,6 +1,7 @@
 {
     "requires": [
-        "houdini_mcp"
+        "houdini_mcp",
+        "houdini_mcp_base"
     ],
     "env": [
         {
