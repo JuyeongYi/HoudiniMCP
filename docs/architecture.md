@@ -40,39 +40,51 @@ MCP 클라이언트 (Claude Code 등)
 
 ```
 houdini_mcp                  서버 + 레지스트리 (툴 없음)
-├─ houdini_mcp_base          컨텍스트를 가리지 않는 것 (102)
-├─ houdini_mcp_sop           SOP (30)
-├─ houdini_mcp_lop           LOP / USD 스테이지 (22)
-├─ houdini_mcp_mat           머티리얼 (20)
-├─ houdini_mcp_hda           HDA (19)
-├─ houdini_mcp_rig           KineFX / APEX 리깅 (19)
-├─ houdini_mcp_dop           DOP 공통 (18)
-│  └─ houdini_mcp_dop_rbd    RBD 진단 (2)
-├─ houdini_mcp_chop          CHOP / 채널 (17)
-├─ houdini_mcp_render        렌더 (13)
-├─ houdini_mcp_io            내보내기·가져오기 (8)
-├─ houdini_mcp_vex           VEX 검증·wrangle (8)
-├─ houdini_mcp_cop           COP(Copernicus) 미리보기 (2)
-└─ houdini_mcp_example       팩 작성 예시 (1)
+├─ houdini_mcp_base          컨텍스트를 가리지 않는 것
+├─ houdini_mcp_sop           SOP
+├─ houdini_mcp_lop           LOP / USD 스테이지
+├─ houdini_mcp_mat           머티리얼
+├─ houdini_mcp_hda           HDA
+├─ houdini_mcp_rig           KineFX / APEX 리깅
+├─ houdini_mcp_dop           DOP 공통
+│  └─ houdini_mcp_dop_rbd    RBD 진단
+├─ houdini_mcp_chop          CHOP / 채널
+├─ houdini_mcp_render        렌더
+├─ houdini_mcp_io            내보내기·가져오기
+├─ houdini_mcp_vex           VEX 검증·wrangle
+├─ houdini_mcp_cop           COP(Copernicus)
+└─ houdini_mcp_example       팩 작성 예시
 ```
 
-괄호는 툴 수(총 281, 2026-09-13). `houdini_mcp_base` 는 예외적으로 "어떤 컨텍스트에서
-무엇을 하든 쓰이는 것"을 모두 담고 팩이 아니라 모듈로 나눈다(`info`, `edit`, `parms`,
-`geometry`, `viewport`, `cache`, `scene`, `deps` 등 20개). 하위 전문 팩(`dop_rbd`)은
-상위 팩(`dop`)을 `requires` 에 넣는다.
+팩마다의 툴 목록과 개수는 각 팩의 `README.md` 에 있다(코드에서 생성). `houdini_mcp_base` 는
+예외적으로 "어떤 컨텍스트에서 무엇을 하든 쓰이는 것"을 모두 담고 팩이 아니라 모듈로
+나눈다(`info`, `edit`, `parms`, `geometry`, `viewport`, `cache`, `scene`, `deps` 등). 하위
+전문 팩(`dop_rbd`)은 상위 팩(`dop`)을 `requires` 에 넣는다.
 
 ### 팩 하나의 파일
 
 ```
-houdini_mcp_<도메인>.json                                   패키지 정의 (hpath, env, requires)
+packages/houdini_mcp_<도메인>.json                          패키지 정의 (hpath, env, requires)
 houdini_mcp_<도메인>/python3.13libs/pythonrc.py             등록 진입점
 houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/__init__.py   TOOL_MODULES 선언
 houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/<모듈>.py      @tool 함수들
-houdini_mcp_<도메인>/README.md                              툴 목록 (scripts/gen_pack_readmes.py 생성)
+houdini_mcp_<도메인>/README.md, README.en.md                툴 목록 (scripts/gen_pack_readmes.py 생성)
+docs/i18n/en/houdini_mcp_<도메인>.json                      README.en.md 용 영어 번역 카탈로그
 ```
 
 JSON 파일명, 디렉토리명, 파이썬 패키지명은 모두 같다. `requires` 와 로그 category 가
 이 이름을 그대로 쓴다.
+
+패키지 JSON 은 전부 `packages/` 에 모여 있고, 팩 디렉토리는 저장소 루트에 있다. 그래서
+JSON 은 자기 위치(`$HOUDINI_PACKAGE_PATH`)에서 한 단계 올라가 팩을 찾는다.
+
+```json
+"env": [{ "HOUDINI_MCP_COP": "$HOUDINI_PACKAGE_PATH/../houdini_mcp_cop" }],
+"hpath": "$HOUDINI_MCP_COP"
+```
+
+`packages/` 하나만 `HOUDINI_PACKAGE_DIR` 에 더하면 모든 팩이 로드된다. JSON 만 다른
+디렉토리로 복사하면 상대 경로가 깨지므로, 팩을 빼려면 `packages/` 에서 그 JSON 을 지운다.
 
 ---
 
@@ -111,7 +123,7 @@ sequenceDiagram
     participant U as houdini_mcp uiready.py
     participant S as server / ToolSync
 
-    H->>H: HOUDINI_PACKAGE_DIR 의 *.json 처리 (hpath, env, requires)
+    H->>H: HOUDINI_PACKAGE_DIR(packages/) 의 *.json 처리 (hpath, env, requires)
     H->>P: 모든 패키지의 pythonrc.py 실행 (팩끼리 순서 무관)
     P->>P: register_pack("houdini_mcp_<도메인>")
     P->>R: TOOL_MODULES 모듈 import → @tool 이 ToolSpec 등록
@@ -212,11 +224,12 @@ MCP 로 노출된다(핫 리로드).
 
 ### 새 팩 만들기
 
-1. `houdini_mcp_example` 을 복사해 이름을 `houdini_mcp_<도메인>` 으로 바꾼다
-   (JSON 파일명·디렉토리·파이썬 패키지 세 곳).
+1. `houdini_mcp_example` 과 `packages/houdini_mcp_example.json` 을 복사해 이름을
+   `houdini_mcp_<도메인>` 으로 바꾼다(JSON 파일명·디렉토리·파이썬 패키지 세 곳).
 2. JSON 의 `requires` 에 `houdini_mcp`(필요하면 `houdini_mcp_base`, 상위 팩)를 넣는다.
 3. 모듈에 `@tool` 함수를 쓰고 `TOOL_MODULES` 에 모듈 이름을 적는다.
-4. `python scripts/gen_pack_readmes.py` 로 팩 README 를 만든다.
+4. `python scripts/gen_pack_readmes.py --sync-i18n` 으로 번역 카탈로그에 항목을 넣고
+   영어를 채운 뒤, `python scripts/gen_pack_readmes.py` 로 팩 README(한/영)를 만든다.
 5. GUI Houdini 에서 MCP 로 불러 확인한다(`scripts/run-houdini.ps1`).
 
 ---
@@ -234,8 +247,9 @@ MCP 로 노출된다(핫 리로드).
 | `CRYPTOGRAPHY_OPENSSL_NO_LEGACY` | `1` (서버 JSON 의 `env`) | `import mcp` 의 OpenSSL legacy 경고 원인을 끈다 |
 
 MCP SDK(`mcp>=2.2,<3`)는 Houdini 의 파이썬에 설치한다: `hython -m pip install -r requirements.txt`.
-개발용 실행은 `scripts/run-houdini.ps1` — 저장소 루트를 `HOUDINI_PACKAGE_DIR` 로 지정해 모든
-팩을 한 번에 로드한다(`-Port`, `-IsolatePrefs`, `-NoTools`, `-LogDir`, `-ConsoleLog`).
+개발용 실행은 `scripts/run-houdini.ps1` — `packages/` 를 `HOUDINI_PACKAGE_DIR` 앞에 붙여 모든
+팩을 한 번에 로드한다. 기존 값은 덮어쓰지 않으므로 다른 플러그인 패키지도 그대로 뜬다
+(`-Port`, `-IsolatePrefs`, `-NoTools`, `-LogDir`, `-ConsoleLog`).
 
 ---
 
@@ -246,6 +260,6 @@ MCP SDK(`mcp>=2.2,<3`)는 Houdini 의 파이썬에 설치한다: `hython -m pip 
 | 패키지 로드 순서 가정 | `tests/package_order` — hython 으로 단계 경계와 `requires` 동작을 실측 고정 |
 | 팩 로직 | `tests/<팩>/` — hython 서브프로세스로 시나리오를 돌려 결과를 검사 |
 | 실제 사용 경로 | GUI Houdini 에 핫 리로드한 뒤 MCP 로 호출해 확인 (뷰포트·렌더 툴은 hython 에서 검증 불가) |
-| 등록 누락 | 코드의 `@tool` 수 = 레지스트리 수 = MCP `tools/list` 수 (2026-09-13: 281) |
-| 팩 README 최신 여부 | `python scripts/gen_pack_readmes.py --check` |
+| 등록 누락 | 코드의 `@tool` 수 = 레지스트리 수 = MCP `tools/list` 수 |
+| 팩 README·번역 최신 여부 | `python scripts/gen_pack_readmes.py --check` |
 | 파이썬 품질 | `ruff check` |

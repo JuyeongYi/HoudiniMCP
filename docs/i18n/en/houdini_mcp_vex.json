@@ -1,0 +1,115 @@
+{
+  "pack": "houdini_mcp_vex",
+  "overview": {
+    "text": {
+      "source": "VEX 전문 툴 팩.\n\nVEX 코드를 쓰고, **컴파일해 보고**, 진단한다. 핵심은 검증에 노드를 쓰지 않는\n것이다. Houdini 는 VEX 컴파일러를 `$HFS/bin/vcc` 에 실행 파일로 갖고 있으므로,\n씬을 건드리지 않고 줄·열 번호까지 정확한 진단을 받을 수 있다.\n\n    compiler   vcc 발견·호출·진단 파싱 (툴 없음)\n    snippet    wrangle 의 @어트리뷰트 문법을 순수 VEX 로 옮기는 번역기 (툴 없음)\n    validate   validate_vex, wrangle_attribs - 노드를 만들지 않는 검증\n    wrangle    create_wrangle, update_wrangle, list_wrangles, diagnose_wrangle\n    reference  list_vex_contexts, vex_function_info - VEX 언어 자체의 레퍼런스\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다. compiler 와\nsnippet 은 툴이 없으므로 목록에 없다 - 툴 모듈이 알아서 import 한다.",
+      "source_hash": "ff99370a530c",
+      "en": "VEX tool pack.\n\nWrite VEX code, **compile it**, and diagnose it. The key point is that validation does not use\nnodes. Houdini ships the VEX compiler as an executable at `$HFS/bin/vcc`, so you get diagnostics\nwith exact line and column numbers without touching the scene.\n\n    compiler   finds and calls vcc, parses diagnostics (no tools)\n    snippet    translates wrangle @attribute syntax into plain VEX (no tools)\n    validate   validate_vex, wrangle_attribs - validation without creating nodes\n    wrangle    create_wrangle, update_wrangle, list_wrangles, diagnose_wrangle\n    reference  list_vex_contexts, vex_function_info - reference for the VEX language itself\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering. compiler and\nsnippet have no tools and are not listed - the tool modules import them."
+    }
+  },
+  "modules": {
+    "validate": {
+      "source": "노드를 만들지 않고 VEX 를 검증한다.",
+      "source_hash": "22b83c2dbe00",
+      "en": "Validate VEX without creating nodes."
+    },
+    "wrangle": {
+      "source": "wrangle 노드를 만들고, 고치고, 찾고, 진단한다.",
+      "source_hash": "2401129043f0",
+      "en": "Create, change, find and diagnose wrangle nodes."
+    },
+    "reference": {
+      "source": "VEX 언어 자체의 레퍼런스 — 컨텍스트, 전역 변수, 함수 시그니처.",
+      "source_hash": "2f07d2051dad",
+      "en": "Reference for the VEX language itself — contexts, globals, function signatures."
+    }
+  },
+  "tools": {
+    "validate_vex": {
+      "source": "wrangle 코드를 컴파일해서 검증한다. 노드를 만들지 않고 씬도 안 건드린다.\ncode: 검증할 코드. mode 에 따라 VEXpression 이거나 순수 VEX 소스다.\nmode: \"snippet\" 이면 wrangle 에 넣는 VEXpression(`@P.y += 1;`)으로 본다. \"source\" 면 컨텍스트 함수까지 직접 쓴 순수 VEX 파일로 본다.\ncontext: VEX 컨텍스트. wrangle 스니펫은 전부 \"cvex\" 다. 셰이더 소스를 볼 때만 \"surface\" 등으로 바꾼다. list_vex_contexts 로 목록을 본다.\nattrib_types: 접두사를 쓰지 않은 어트리뷰트의 타입을 직접 지정한다. 예: {\"myvec\": \"vector\"}. 주지 않으면 Houdini 와 같은 규칙으로 추론하고, 모르는 이름은 float 로 본다.\ninclude_dirs: `#include \"...\"` 를 찾을 추가 디렉토리.",
+      "source_hash": "37f220ab9768",
+      "summary": "Validates wrangle code by compiling it. Creates no nodes and does not touch the scene.",
+      "args": {
+        "code": "Code to validate. Depending on mode, a VEXpression or plain VEX source.",
+        "mode": "\"snippet\" treats the code as a VEXpression for a wrangle (`@P.y += 1;`). \"source\" treats it as a plain VEX file that defines the context function itself.",
+        "context": "VEX context. Wrangle snippets are all \"cvex\". Change it to \"surface\" and so on only for shader source. See list_vex_contexts for the list.",
+        "attrib_types": "Types for attributes written without a prefix. Example: {\"myvec\": \"vector\"}. If omitted, types are inferred with Houdini's rules and unknown names are treated as float.",
+        "include_dirs": "Extra directories to search for `#include \"...\"`."
+      }
+    },
+    "wrangle_attribs": {
+      "source": "코드가 읽고 쓰는 어트리뷰트를 뽑고, 입력에 실제로 있는지 대조한다.\ncode: wrangle 스니펫.\ninput_path: 대조할 입력 노드 경로. 보통 wrangle 의 첫 입력이다. 쿡되지 않았으면 쿡한다.\nrun_over: wrangle 이 도는 요소. \"point\", \"prim\", \"vertex\", \"detail\". 여기서 먼저 찾고 없으면 다른 클래스에서 찾는다.\nattrib_types: 접두사를 쓰지 않은 어트리뷰트의 타입 지정.",
+      "source_hash": "2d9a5acc48b4",
+      "summary": "Extracts the attributes the code reads and writes and checks whether the input actually has them.",
+      "args": {
+        "code": "Wrangle snippet.",
+        "input_path": "Input node to check against, usually the wrangle's first input. Cooked if it has not been.",
+        "run_over": "Element the wrangle runs over: \"point\", \"prim\", \"vertex\", \"detail\". That class is searched first, then the others.",
+        "attrib_types": "Types for attributes written without a prefix."
+      }
+    },
+    "create_wrangle": {
+      "source": "wrangle 노드를 만들고 VEX 코드를 넣는다. 넣기 전에 먼저 컴파일해 본다.\nparent: 부모 네트워크 경로. 예: /obj/geo1\ncode: wrangle 스니펫. `@P.y += 1;` 처럼 `@` 문법을 그대로 쓴다.\ncomment: 이 wrangle 이 무엇을 하는지. 필수. 씬 파일에 저장되므로 영어로 쓴다. 예: \"Push points up by noise\"\nnode_type: 만들 노드 타입. attribwrangle, pointwrangle, volumewrangle, deformationwrangle, popwrangle, geometrywrangle, channelwrangle 등.\nname: 노드 이름. 역할이 드러나게, 영어로. 생략하면 Houdini 가 정한다.\nrun_over: 도는 요소. \"point\", \"prim\", \"vertex\", \"detail\". class 파라미터가 있는 노드에만 적용된다.\ngroup: 처리할 그룹 이름. 생략하면 전부.\ninput_path: 첫 입력으로 연결할 노드 경로.\nattrib_types: 접두사를 쓰지 않은 어트리뷰트의 타입 지정. 예: {\"myvec\": \"vector\"}",
+      "source_hash": "5a4454dc544b",
+      "summary": "Creates a wrangle node and puts VEX code in it. The code is compiled first.",
+      "args": {
+        "parent": "Parent network path. Example: /obj/geo1",
+        "code": "Wrangle snippet. Use the `@` syntax as is, e.g. `@P.y += 1;`.",
+        "comment": "What this wrangle does. Required. Stored in the scene file, so write it in English. Example: \"Push points up by noise\"",
+        "node_type": "Node type to create: attribwrangle, pointwrangle, volumewrangle, deformationwrangle, popwrangle, geometrywrangle, channelwrangle and so on.",
+        "name": "Node name. English, describing its role. If omitted, Houdini picks one.",
+        "run_over": "Element to run over: \"point\", \"prim\", \"vertex\", \"detail\". Applies only to nodes with a class parameter.",
+        "group": "Group to process. All elements if omitted.",
+        "input_path": "Node path to connect as the first input.",
+        "attrib_types": "Types for attributes written without a prefix. Example: {\"myvec\": \"vector\"}"
+      }
+    },
+    "update_wrangle": {
+      "source": "wrangle 의 VEX 코드를 갈아 끼운다. 넣기 전에 먼저 컴파일해 본다.\npath: wrangle 노드 경로.\ncode: 새 스니펫.\ncomment: 코멘트도 함께 바꾼다. 하는 일이 달라졌으면 같이 고친다. 씬에 저장되므로 영어로 쓴다.\nattrib_types: 접두사를 쓰지 않은 어트리뷰트의 타입 지정.",
+      "source_hash": "50b7bb147c8b",
+      "summary": "Replaces a wrangle's VEX code. The code is compiled first.",
+      "args": {
+        "path": "Wrangle node path.",
+        "code": "New snippet.",
+        "comment": "Also replaces the comment. Update it if what the node does has changed. Stored in the scene, so write it in English.",
+        "attrib_types": "Types for attributes written without a prefix."
+      }
+    },
+    "list_wrangles": {
+      "source": "범위 안의 wrangle 과 그 코드를 훑는다.\nroot: 훑기 시작할 경로.\ndepth: 하위 네트워크를 몇 단계까지 따라 들어갈지.\ncontains: 코드에 이 문자열이 든 것만. 예: \"@Cd\"",
+      "source_hash": "0c84fc6bee3b",
+      "summary": "Scans the wrangles in a scope and their code.",
+      "args": {
+        "root": "Path to start scanning from.",
+        "depth": "How many levels of sub-networks to follow.",
+        "contains": "Only wrangles whose code contains this string. Example: \"@Cd\""
+      }
+    },
+    "diagnose_wrangle": {
+      "source": "wrangle 하나를 컴파일 에러·쿡 에러·어트리뷰트 세 방향에서 본다.\npath: wrangle 노드 경로.\ncook: 노드를 쿡해서 실제 에러도 볼지. 무거우면 False 로 둔다.",
+      "source_hash": "ab429258c374",
+      "summary": "Looks at one wrangle from three angles: compile errors, cook errors and attributes.",
+      "args": {
+        "path": "Wrangle node path.",
+        "cook": "Whether to cook the node to see real errors too. Set False if it is heavy."
+      }
+    },
+    "list_vex_contexts": {
+      "source": "VEX 컨텍스트 목록. 하나를 지정하면 그 컨텍스트의 전역 변수까지 준다.\ncontext: 전역 변수를 볼 컨텍스트. 예: sop, cvex, surface. 생략하면 목록만 준다.",
+      "source_hash": "682c4b1115e8",
+      "summary": "List of VEX contexts. Given one context, also returns its global variables.",
+      "args": {
+        "context": "Context whose globals to show. Examples: sop, cvex, surface. If omitted, only the list is returned."
+      }
+    },
+    "vex_function_info": {
+      "source": "VEX 함수의 시그니처를 찾는다. 이름이 정확하지 않으면 비슷한 것을 준다.\nname: 함수 이름. 일부만 줘도 된다. 예: \"noise\", \"pcopen\", \"prim\"\ncontext: 어느 컨텍스트에서 쓸 수 있는지 볼지. sop, cvex, surface 등. 컨텍스트마다 쓸 수 있는 함수가 조금씩 다르다.",
+      "source_hash": "28c538059c28",
+      "summary": "Looks up VEX function signatures. If the name is not exact, similar ones are returned.",
+      "args": {
+        "name": "Function name. A partial name works. Examples: \"noise\", \"pcopen\", \"prim\"",
+        "context": "Context to check availability in: sop, cvex, surface and so on. The available functions differ slightly per context."
+      }
+    }
+  }
+}

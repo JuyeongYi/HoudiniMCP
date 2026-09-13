@@ -1,0 +1,300 @@
+{
+  "pack": "houdini_mcp_lop",
+  "overview": {
+    "text": {
+      "source": "LOPs / Solaris / USD 전문 툴 팩.\n\n이 팩은 USD 를 **LOP 노드의 파라미터가 아니라 컴포지션이 끝난 스테이지로**\n다룬다. `hou.LopNode.stage()` 가 주는 `pxr.Usd.Stage` 를 직접 질의하므로,\n서브레이어·레퍼런스·페이로드·배리언트·인헤릿이 겹친 뒤의 **실제 값**을 본다.\n노드 파라미터를 읽는 방식은 컴포지션을 무시하기 때문에 틀린 답을 준다.\n\n    stage        스테이지 조회 - 요약, 계층, 검색, 프림 상세\n    attrs        USD 어트리뷰트 읽기·쓰기\n    layers       레이어 스택과 값의 출처 추적 (prim_origin)\n    composition  컴포지션 아크 - 레퍼런스·페이로드·서브레이어·배리언트\n    lights       UsdLux 라이트\n    check        스테이지 검증\n\nusdcommon 은 툴이 없는 공용 헬퍼라 TOOL_MODULES 에 넣지 않는다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "e0a3dfb57597",
+      "en": "LOPs / Solaris / USD tool pack.\n\nThis pack treats USD **as the composed stage, not as LOP node parameters**. It queries the\n`pxr.Usd.Stage` returned by `hou.LopNode.stage()` directly, so it sees the **actual values** after\nsublayers, references, payloads, variants and inherits have been layered. Reading node parameters\nignores composition and gives wrong answers.\n\n    stage        stage queries - summary, hierarchy, search, prim details\n    attrs        reading and writing USD attributes\n    layers       layer stack and tracing where values come from (prim_origin)\n    composition  composition arcs - references, payloads, sublayers, variants\n    lights       UsdLux lights\n    check        stage validation\n\nusdcommon is a shared helper without tools, so it is not in TOOL_MODULES.\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "stage": {
+      "source": "컴포지션이 끝난 USD 스테이지를 조회하는 툴들.",
+      "source_hash": "0b0e57ee8490",
+      "en": "Tools that query the composed USD stage."
+    },
+    "attrs": {
+      "source": "USD 어트리뷰트를 읽고 쓴다.",
+      "source_hash": "093d548268f0",
+      "en": "Read and write USD attributes."
+    },
+    "layers": {
+      "source": "레이어 스택과 **값의 출처**.",
+      "source_hash": "11603a1255d9",
+      "en": "The layer stack and **where values come from**."
+    },
+    "composition": {
+      "source": "컴포지션 아크 - 레퍼런스, 페이로드, 서브레이어, 배리언트, 인헤릿.",
+      "source_hash": "36800fe383bf",
+      "en": "Composition arcs - references, payloads, sublayers, variants, inherits."
+    },
+    "lights": {
+      "source": "UsdLux 라이트.",
+      "source_hash": "6ce910b277a6",
+      "en": "UsdLux lights."
+    },
+    "check": {
+      "source": "스테이지 검증 - 렌더를 걸기 전에 무엇이 빠졌는지 찾는다.",
+      "source_hash": "b149119f019a",
+      "en": "Stage validation - finds what is missing before a render."
+    }
+  },
+  "tools": {
+    "stage_info": {
+      "source": "스테이지 요약 - 프림 수, 타입별 분포, 레이어 수, up axis, 단위, 시간 범위.\nlop: LOP 노드 경로. LOP 네트워크(기본값 /stage)를 주면 디스플레이 노드의 스테이지를 본다.\nframe: 이 프레임에서 쿡한 스테이지를 본다. 생략하면 현재 프레임.",
+      "source_hash": "f4d88b4a77ff",
+      "summary": "Stage summary - prim count, distribution by type, layer count, up axis, units, time range.",
+      "args": {
+        "lop": "LOP node path. Given a LOP network (default /stage), the display node's stage is used.",
+        "frame": "Look at the stage cooked at this frame. Defaults to the current frame."
+      }
+    },
+    "list_prims": {
+      "source": "계층을 깊이·개수 제한을 두고 훑는다.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nroot: 순회를 시작할 프림 경로. \"/\" 는 스테이지 전체.\ndepth: root 아래로 몇 단계까지 내려갈지. 1 이면 바로 아래 자식만.\nlimit: 돌려줄 프림 수 상한. 스테이지는 크므로 반드시 건다.\ninclude_inactive: True 면 비활성 프림도 포함한다.\nframe: 이 프레임에서 쿡한 스테이지를 본다.",
+      "source_hash": "77a3986441a5",
+      "summary": "Walks the hierarchy with depth and count limits.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "root": "Prim path to start from. \"/\" is the whole stage.",
+        "depth": "How many levels below root to descend. 1 means direct children only.",
+        "limit": "Maximum number of prims returned. Stages are large, so always set it.",
+        "include_inactive": "True also includes inactive prims.",
+        "frame": "Look at the stage cooked at this frame."
+      }
+    },
+    "find_prims": {
+      "source": "Houdini 의 프림 패턴으로 프림을 찾는다.\nlop: LOP 노드 또는 LOP 네트워크 경로.\npattern: 프림 패턴.\nlimit: 돌려줄 프림 수 상한.\ntraversal: 순회 조건. \"default\"(활성·정의·로드됨), \"all\"(전부), \"defined\", \"active\", \"loaded\" 중 하나.",
+      "source_hash": "d62a1e0f7ddc",
+      "summary": "Finds prims with a Houdini prim pattern.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "pattern": "Prim pattern.",
+        "limit": "Maximum number of prims returned.",
+        "traversal": "Traversal condition. One of \"default\" (active, defined, loaded), \"all\" (everything), \"defined\", \"active\", \"loaded\"."
+      }
+    },
+    "prim_info": {
+      "source": "프림 하나의 전부 - 타입, 스키마, 가시성, 바운드, 머티리얼 바인딩, 배리언트.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 프림 경로. 예: /world/ball\ninclude_attributes: True 면 어트리뷰트 이름과 값이 있는지 여부를 함께 준다. 값 자체는 get_attribute 로 읽는다.\nframe: 이 프레임에서 쿡한 스테이지를 본다.",
+      "source_hash": "a5271169ad30",
+      "summary": "Everything about one prim - type, schemas, visibility, bounds, material binding, variants.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Prim path. Example: /world/ball",
+        "include_attributes": "True also returns attribute names and whether they have values. Read the values themselves with get_attribute.",
+        "frame": "Look at the stage cooked at this frame."
+      }
+    },
+    "prim_stats": {
+      "source": "프림 아래의 통계 - 타입별 개수, 지오메트리 양, kind, 페이로드 로드 상태.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 통계를 낼 프림 경로. \"/\" 면 스테이지 전체.\ngeometry_counts: True 면 점·폴리곤 수까지 센다. 무거우면 끈다.\nframe: 이 프레임에서 쿡한 스테이지를 본다.",
+      "source_hash": "b1414b734755",
+      "summary": "Statistics under a prim - counts by type, amount of geometry, kind, payload load state.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Prim path to compute statistics for. \"/\" is the whole stage.",
+        "geometry_counts": "True also counts points and polygons. Turn it off if it is heavy.",
+        "frame": "Look at the stage cooked at this frame."
+      }
+    },
+    "list_usd_attributes": {
+      "source": "프림의 어트리뷰트 목록 - 이름, 타입, 값이 걸렸는지, 시간에 따라 변하는지.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 프림 경로.\nauthored_only: True 면 실제로 값이 걸린 것만. False 면 스키마가 정의한 것까지 전부(수십 개가 된다).\nframe: 이 프레임에서 쿡한 스테이지를 본다.",
+      "source_hash": "6601cd4185f5",
+      "summary": "Attribute list of a prim - name, type, whether a value is authored, whether it varies over time.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Prim path.",
+        "authored_only": "True returns only attributes with authored values. False returns everything the schemas define (dozens).",
+        "frame": "Look at the stage cooked at this frame."
+      }
+    },
+    "get_usd_attribute": {
+      "source": "어트리뷰트 값을 컴포지션이 끝난 뒤의 값으로 읽는다.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 프림 경로.\nname: 어트리뷰트 이름. 예: radius, points, inputs:intensity\nframe: 이 시각의 값을 읽는다. 생략하면 default 값.\nmax_array: 배열 값에서 돌려줄 원소 수 상한.",
+      "source_hash": "6809638ace75",
+      "summary": "Reads an attribute value as it is after composition.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Prim path.",
+        "name": "Attribute name. Examples: radius, points, inputs:intensity",
+        "frame": "Read the value at this time. The default value if omitted.",
+        "max_array": "Maximum number of elements returned for array values."
+      }
+    },
+    "set_usd_attribute": {
+      "source": "어트리뷰트에 값을 건다. `pythonscript` LOP 을 끼워 넣는 방식이다.\nlop: 편집의 입력이 될 LOP 노드 경로. 네트워크를 주면 디스플레이 노드.\nprimpath: 값을 걸 프림 경로.\nname: 어트리뷰트 이름. 예: radius, inputs:intensity, visibility\nvalue: 넣을 값. 벡터와 배열은 리스트로. 예: 2.5, [1,0,0], [[0,0,0],[1,1,1]]\ncomment: 이 편집이 왜 필요한지. 노드 코멘트로 남는다. 영어로 쓴다.\ntype_name: 새 어트리뷰트를 만들 때의 USD 타입. 예: double, float3, token, float3[], asset\nframe: 값을 이 시각의 시간 샘플로 건다. 생략하면 default 값.\nnode_name: 만들 노드 이름. 생략하면 어트리뷰트 이름에서 짓는다.",
+      "source_hash": "f66a46b3503a",
+      "summary": "Sets a value on an attribute by inserting a `pythonscript` LOP.",
+      "args": {
+        "lop": "LOP node path that feeds the edit. Given a network, its display node.",
+        "primpath": "Prim path to set the value on.",
+        "name": "Attribute name. Examples: radius, inputs:intensity, visibility",
+        "value": "Value to set. Vectors and arrays as lists. Examples: 2.5, [1,0,0], [[0,0,0],[1,1,1]]",
+        "comment": "Why this edit is needed. Kept as the node comment. Write it in English.",
+        "type_name": "USD type when creating a new attribute. Examples: double, float3, token, float3[], asset",
+        "frame": "Set the value as a time sample at this time. The default value if omitted.",
+        "node_name": "Name of the node to create. Derived from the attribute name if omitted."
+      }
+    },
+    "layer_stack": {
+      "source": "스테이지의 루트 레이어 스택 - 어떤 레이어가 어떤 순서로 겹쳐 있는가.\nlop: LOP 노드 또는 LOP 네트워크 경로.\ninclude_session: True 면 세션 레이어(뷰포트 오버라이드, 솔로, 가시성 토글 등)도 함께 준다. 보통은 볼 필요가 없다.",
+      "source_hash": "1fd101de3c40",
+      "summary": "The stage's root layer stack - which layers are stacked in what order.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "include_session": "True also returns the session layer (viewport overrides, solo, visibility toggles and so on). Usually not needed."
+      }
+    },
+    "layer_contents": {
+      "source": "레이어의 실제 내용을 USDA 텍스트로 본다.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nidentifier: 레이어 identifier. layer_stack 이나 prim_origin 이 돌려준 것을 그대로 넣는다. 비우면 그 LOP 노드의 active layer.\nprimpath: 이 프림 스펙만 본다. 생략하면 레이어 전체.\nmax_chars: 돌려줄 텍스트 길이 상한.",
+      "source_hash": "ec160e2ee74a",
+      "summary": "Shows the actual content of a layer as USDA text.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "identifier": "Layer identifier, exactly as returned by layer_stack or prim_origin. Empty means that LOP node's active layer.",
+        "primpath": "Show only this prim spec. The whole layer if omitted.",
+        "max_chars": "Maximum length of the returned text."
+      }
+    },
+    "prim_origin": {
+      "source": "이 프림(또는 어트리뷰트) 값이 **어느 레이어의 어느 아크에서 왔는가**.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 프림 경로.\nattribute: 어트리뷰트 이름을 주면 그 어트리뷰트의 의견 스택을 본다. 생략하면 프림 자체의 스펙 스택.\nframe: 어트리뷰트 의견을 이 시각 기준으로 본다.",
+      "source_hash": "b10d48f0f991",
+      "summary": "**Which arc of which layer** the value of this prim (or attribute) comes from.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Prim path.",
+        "attribute": "Given an attribute name, shows that attribute's opinion stack. Otherwise the prim's own spec stack.",
+        "frame": "Evaluate attribute opinions at this time."
+      }
+    },
+    "composition_arcs": {
+      "source": "이 프림에 걸린 컴포지션 아크 전부 - 무엇이 어디서 끌려왔는가.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 프림 경로.\narc_types: 이 종류만 본다. 예: [\"reference\", \"payload\", \"variant\"] 생략하면 전부.\ninclude_ancestral: False 면 상위에서 상속된 아크를 뺀다. 이 프림에 직접 걸린 것만 보고 싶을 때.",
+      "source_hash": "7e84712ad5a3",
+      "summary": "Every composition arc on this prim - what was pulled in from where.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Prim path.",
+        "arc_types": "Only these kinds. Example: [\"reference\", \"payload\", \"variant\"]. All if omitted.",
+        "include_ancestral": "False leaves out arcs inherited from ancestors, to see only those authored directly on this prim."
+      }
+    },
+    "list_variants": {
+      "source": "프림의 배리언트 셋과 각각의 선택지, 현재 선택.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 프림 경로.",
+      "source_hash": "3856a8d2af04",
+      "summary": "A prim's variant sets, their choices and the current selection.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Prim path."
+      }
+    },
+    "set_variant": {
+      "source": "배리언트를 고른다. `setvariant` LOP 을 끼워 넣는다.\nlop: 입력이 될 LOP 노드 경로.\nprimpath: 배리언트 셋을 가진 프림 경로.\nvariant_set: 배리언트 셋 이름.\nvariant: 고를 배리언트 이름.\ncomment: 왜 이 배리언트인지. 노드 코멘트로 남는다. 영어로 쓴다.\nnode_name: 만들 노드 이름. 생략하면 배리언트 이름에서 짓는다.",
+      "source_hash": "1a84b6c937d7",
+      "summary": "Selects a variant by inserting a `setvariant` LOP.",
+      "args": {
+        "lop": "LOP node path used as input.",
+        "primpath": "Path of the prim that has the variant set.",
+        "variant_set": "Variant set name.",
+        "variant": "Variant name to select.",
+        "comment": "Why this variant. Kept as the node comment. Write it in English.",
+        "node_name": "Name of the node to create. Derived from the variant name if omitted."
+      }
+    },
+    "add_reference": {
+      "source": "레퍼런스·페이로드·인헤릿·스페셜라이즈를 건다. `reference` LOP 을 끼워 넣는다.\nlop: 입력이 될 LOP 노드 경로.\nprimpath: 아크를 걸 프림 경로. 예: /world/props/chair\ncomment: 이 아크가 무엇인지. 노드 코멘트로 남는다. 영어로 쓴다.\nfile_path: 끌어올 USD 파일 경로. file / payload 에만 쓴다.\nreference_type: \"file\"(레퍼런스), \"payload\"(지연 로드), \"prim\"(같은 스테이지 안의 프림), \"inherit\", \"specialize\".\nsource_prim: file / payload 면 파일 안에서 끌어올 프림 경로(생략하면 defaultPrim). prim / inherit / specialize 면 같은 스테이지 안의 원본 프림 경로이며 반드시 필요하다.\ncreate_prims: 대상 프림이 없으면 만든다.\nnode_name: 만들 노드 이름. 생략하면 대상 프림 이름에서 짓는다.",
+      "source_hash": "40f97da1deec",
+      "summary": "Adds a reference, payload, inherit or specialize by inserting a `reference` LOP.",
+      "args": {
+        "lop": "LOP node path used as input.",
+        "primpath": "Prim path to add the arc on. Example: /world/props/chair",
+        "comment": "What this arc is. Kept as the node comment. Write it in English.",
+        "file_path": "USD file path to pull in. Only for file / payload.",
+        "reference_type": "\"file\" (reference), \"payload\" (deferred load), \"prim\" (prim in the same stage), \"inherit\", \"specialize\".",
+        "source_prim": "For file / payload, the prim path inside the file to pull in (defaultPrim if omitted). For prim / inherit / specialize, the source prim path in the same stage, which is required.",
+        "create_prims": "Create the target prim if it does not exist.",
+        "node_name": "Name of the node to create. Derived from the target prim name if omitted."
+      }
+    },
+    "add_sublayer": {
+      "source": "USD 파일을 서브레이어로 깐다. `sublayer` LOP 을 끼워 넣는다.\nlop: 입력이 될 LOP 노드 경로.\nfile_path: 깔 USD 파일 경로.\ncomment: 이 레이어가 무엇인지. 노드 코멘트로 남는다. 영어로 쓴다.\nnode_name: 만들 노드 이름. 생략하면 파일 이름에서 짓는다.",
+      "source_hash": "1e8ddf56775a",
+      "summary": "Lays a USD file in as a sublayer by inserting a `sublayer` LOP.",
+      "args": {
+        "lop": "LOP node path used as input.",
+        "file_path": "USD file path to lay in.",
+        "comment": "What this layer is. Kept as the node comment. Write it in English.",
+        "node_name": "Name of the node to create. Derived from the file name if omitted."
+      }
+    },
+    "list_lights": {
+      "source": "스테이지의 라이트 전부 - 타입, 세기, 색, 위치.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nlimit: 돌려줄 라이트 수 상한.",
+      "source_hash": "9c882895aea9",
+      "summary": "Every light on the stage - type, intensity, color, position.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "limit": "Maximum number of lights returned."
+      }
+    },
+    "light_info": {
+      "source": "라이트 하나의 전부 - 세기, 색, 모양, 셰이핑, 그림자, 변환.\nlop: LOP 노드 또는 LOP 네트워크 경로.\nprimpath: 라이트 프림 경로. list_lights 로 찾는다.",
+      "source_hash": "a98fe2f75ee2",
+      "summary": "Everything about one light - intensity, color, shape, shaping, shadows, transform.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "primpath": "Light prim path. Find it with list_lights."
+      }
+    },
+    "create_light": {
+      "source": "UsdLux 라이트를 만든다.\nlop: 입력이 될 LOP 노드 경로. 네트워크를 주면 디스플레이 노드 뒤에 붙는다.\nlight_type: distant, sphere, point, disk, rect, cylinder, dome 중 하나.\nprimpath: 만들 라이트 프림 경로. 예: /world/lights/key\ncomment: 이 라이트가 무엇을 하는지. 노드 코멘트로 남는다. 영어로 쓴다.\nintensity: 세기.\nexposure: 노출(스톱). 세기에 2^exposure 가 곱해진다.\ncolor: RGB. 예: [1.0, 0.95, 0.9]\ntranslate: 위치 [x, y, z].\nrotate: 회전 [rx, ry, rz] (도).\ntexture: 돔/렉트 라이트의 텍스처(HDRI) 파일 경로.\nnode_name: 만들 노드 이름. 생략하면 프림 이름에서 짓는다.",
+      "source_hash": "a80284385af5",
+      "summary": "Creates a UsdLux light.",
+      "args": {
+        "lop": "LOP node path used as input. Given a network, the light goes after the display node.",
+        "light_type": "One of distant, sphere, point, disk, rect, cylinder, dome.",
+        "primpath": "Light prim path to create. Example: /world/lights/key",
+        "comment": "What this light does. Kept as the node comment. Write it in English.",
+        "intensity": "Intensity.",
+        "exposure": "Exposure (stops). Intensity is multiplied by 2^exposure.",
+        "color": "RGB. Example: [1.0, 0.95, 0.9]",
+        "translate": "Position [x, y, z].",
+        "rotate": "Rotation [rx, ry, rz] (degrees).",
+        "texture": "Texture (HDRI) file path for dome/rect lights.",
+        "node_name": "Name of the node to create. Derived from the prim name if omitted."
+      }
+    },
+    "create_light_rig": {
+      "source": "3점 조명(key / fill / rim)과 환경 돔을 한 번에 만든다.\nlop: 입력이 될 LOP 노드 경로.\ncomment: 이 리그가 무엇을 비추는지. 노드 코멘트로 남는다. 영어로 쓴다.\nroot: 라이트를 담을 프림 경로. 예: /world/lights\nkey_intensity: 키 라이트 세기.\nfill_intensity: 필 라이트 세기.\nrim_intensity: 림 라이트 세기.\ndome_texture: 환경 돔에 걸 HDRI 파일 경로. 없으면 균일한 색.\ndome_intensity: 환경 돔 세기.",
+      "source_hash": "21c6ac0b1ec8",
+      "summary": "Creates three-point lighting (key / fill / rim) and an environment dome at once.",
+      "args": {
+        "lop": "LOP node path used as input.",
+        "comment": "What this rig lights. Kept as the node comment. Write it in English.",
+        "root": "Prim path to hold the lights. Example: /world/lights",
+        "key_intensity": "Key light intensity.",
+        "fill_intensity": "Fill light intensity.",
+        "rim_intensity": "Rim light intensity.",
+        "dome_texture": "HDRI file path for the environment dome. A uniform color if missing.",
+        "dome_intensity": "Environment dome intensity."
+      }
+    },
+    "set_light": {
+      "source": "이미 있는 라이트 프림의 속성을 바꾼다. `pythonscript` LOP 을 끼워 넣는다.\nlop: 입력이 될 LOP 노드 경로.\nprimpath: 고칠 라이트 프림 경로.\ncomment: 왜 이렇게 바꾸는지. 노드 코멘트로 남는다. 영어로 쓴다.\nproperties: 속성 이름과 값. 예: {\"intensity\": 5.0, \"color\": [1, 0.9, 0.8]}\nnode_name: 만들 노드 이름. 생략하면 프림 이름에서 짓는다.",
+      "source_hash": "320aede5605d",
+      "summary": "Changes properties of an existing light prim by inserting a `pythonscript` LOP.",
+      "args": {
+        "lop": "LOP node path used as input.",
+        "primpath": "Light prim path to change.",
+        "comment": "Why it is changed this way. Kept as the node comment. Write it in English.",
+        "properties": "Property names and values. Example: {\"intensity\": 5.0, \"color\": [1, 0.9, 0.8]}",
+        "node_name": "Name of the node to create. Derived from the prim name if omitted."
+      }
+    },
+    "validate_stage": {
+      "source": "스테이지를 훑어 흔한 문제를 찾는다 - 깨진 에셋 경로, 빈 프림, 바인딩 누락.\nlop: LOP 노드 또는 LOP 네트워크 경로.\ncheck_materials: 머티리얼 바인딩이 없는 지오메트리를 찾는다. 머티리얼 자체를 만들고 고치는 것은 houdini_mcp_mat 의 일이다.\ncheck_render: 렌더 설정과 카메라가 있는지 본다. 렌더를 실제로 거는 것은 houdini_mcp_render 의 일이다.",
+      "source_hash": "4155b7a0b9eb",
+      "summary": "Scans a stage for common problems - broken asset paths, empty prims, missing bindings.",
+      "args": {
+        "lop": "LOP node or LOP network path.",
+        "check_materials": "Finds geometry without material bindings. Creating and fixing materials themselves is the job of houdini_mcp_mat.",
+        "check_render": "Checks that render settings and a camera exist. Actually rendering is the job of houdini_mcp_render."
+      }
+    }
+  }
+}

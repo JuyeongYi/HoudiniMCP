@@ -1,0 +1,452 @@
+{
+  "pack": "houdini_mcp_sop",
+  "overview": {
+    "text": {
+      "source": "SOP 전문 툴 팩 — 지오메트리를 만들고 고치고 읽는다.\n\n컨텍스트를 가리지 않는 조회(`geometry_stats`, `list_attributes`, `sample_points`\n등)는 `houdini_mcp_base` 의 geometry 모듈에 있다. 여기는 SOP 에서만 의미가 있는\n것을 담는다.\n\n    create     프리미티브·커브 생성, 포인트에 복사\n    polyedit   폴리곤 편집 — 베벨·익스트루드·브리지·미러·리볼브·스킨·불리언\n    topology   토폴로지 변환 — 컨버트·삼각화·리메시·감면·트랜스폼·삭제\n    attribs    어트리뷰트 — numpy 벌크 통계, 노멀, 어트리뷰트 생성\n    groups     그룹 생성과 멤버 조회\n    uv         UV 투영·자동 UV·UV 품질 리포트\n    query      근접 질의·레이 교차·인트린식·볼륨·파일 내보내기\n\n이 팩의 조작 툴은 노드를 만들고 끝내지 않는다. 반드시 쿡해서 전후 통계를 비교해\n돌려준다. 모델이 \"베벨이 먹었는지\"를 다시 묻지 않아도 되게 하기 위해서다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "5f473d6bdcff",
+      "en": "SOP tool pack — creates, edits and reads geometry.\n\nContext-independent queries (`geometry_stats`, `list_attributes`, `sample_points` and others) live\nin the geometry module of `houdini_mcp_base`. This pack holds what only makes sense in SOPs.\n\n    create     primitive and curve creation, copying to points\n    polyedit   polygon editing — bevel, extrude, bridge, mirror, revolve, skin, boolean\n    topology   topology changes — convert, triangulate, remesh, reduce, transform, delete\n    attribs    attributes — numpy bulk statistics, normals, attribute creation\n    groups     group creation and member queries\n    uv         UV projection, auto UVs, UV quality reports\n    query      proximity queries, ray intersection, intrinsics, volumes, file export\n\nThe editing tools in this pack do not stop at creating a node. They always cook it and return a\nbefore/after comparison of statistics, so the model does not have to ask again whether the bevel\ntook effect.\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "create": {
+      "source": "지오메트리를 처음부터 만드는 툴.",
+      "source_hash": "d5f46fd6810f",
+      "en": "Tools that create geometry from scratch."
+    },
+    "polyedit": {
+      "source": "폴리곤을 고치는 툴 — 베벨·익스트루드·브리지·미러·리볼브·스킨·불리언.",
+      "source_hash": "42b57668d4e3",
+      "en": "Tools that edit polygons — bevel, extrude, bridge, mirror, revolve, skin, boolean."
+    },
+    "topology": {
+      "source": "토폴로지를 바꾸는 툴 — 변환·삼각화·리메시·감면·트랜스폼·삭제.",
+      "source_hash": "afa66f2aea70",
+      "en": "Tools that change topology — convert, triangulate, remesh, reduce, transform, delete."
+    },
+    "attribs": {
+      "source": "어트리뷰트를 읽고 만드는 툴.",
+      "source_hash": "86f4233d9ab4",
+      "en": "Tools that read and create attributes."
+    },
+    "groups": {
+      "source": "그룹을 만들고 들여다보는 툴.",
+      "source_hash": "2cff35ae21e2",
+      "en": "Tools that create and inspect groups."
+    },
+    "uv": {
+      "source": "UV 를 만들고 품질을 확인하는 툴.",
+      "source_hash": "241d030a3e07",
+      "en": "Tools that create UVs and check their quality."
+    },
+    "query": {
+      "source": "지오메트리에 질문하는 툴 — 근접·레이·인트린식·볼륨·파일 내보내기.",
+      "source_hash": "4a2404882dbd",
+      "en": "Tools that ask geometry questions — proximity, rays, intrinsics, volumes, file export."
+    }
+  },
+  "tools": {
+    "create_primitive": {
+      "source": "기본 도형 SOP 을 만들고 쿡해서 결과 통계를 돌려준다.\nparent: SOP 을 담을 네트워크. 예: /obj/castle\nshape: box / sphere / tube / grid / torus / circle / platonic\ncomment: 이 노드가 무엇을 위한 것인지. 필수. 씬에 저장되므로 영어로. 예: \"Wall body, 20 x 4 x 1.2\"\nname: 노드 이름. 역할이 드러나게. 예: wall_body, tower_shaft\nsize: 셰이프별 크기 3개. box=(x,y,z), sphere=(rx,ry,rz), tube=(rad_bottom, rad_top, height), grid=(x,y), torus=(major,minor), circle=(rx,ry), platonic=(radius,). 생략하면 노드 기본값.\ncenter: 중심 위치 (x,y,z). 생략하면 원점.\nrotate: 회전 (rx,ry,rz) 도 단위. 생략하면 회전 없음.\ndivisions: 분할 수. box=(x,y,z), 나머지=(rows,cols), circle=(divs,).\nprim_type: poly / polysoup / mesh / nurbs / bezier / prim / points. 셰이프가 지원하지 않는 값이면 쓸 수 있는 값을 알려 준다.\nplatonic_solid: shape=\"platonic\" 일 때만. tetrahedron / cube / octahedron / icosahedron / dodecahedron / soccerball / teapot.",
+      "source_hash": "6012c24ffcae",
+      "summary": "Creates a basic shape SOP, cooks it and returns the resulting statistics.",
+      "args": {
+        "parent": "Network to hold the SOP. Example: /obj/castle",
+        "shape": "box / sphere / tube / grid / torus / circle / platonic",
+        "comment": "What this node is for. Required. Stored in the scene, so write it in English. Example: \"Wall body, 20 x 4 x 1.2\"",
+        "name": "Node name, showing its role. Examples: wall_body, tower_shaft",
+        "size": "Three size values per shape. box=(x,y,z), sphere=(rx,ry,rz), tube=(rad_bottom, rad_top, height), grid=(x,y), torus=(major,minor), circle=(rx,ry), platonic=(radius,). Node defaults if omitted.",
+        "center": "Center position (x,y,z). Origin if omitted.",
+        "rotate": "Rotation (rx,ry,rz) in degrees. No rotation if omitted.",
+        "divisions": "Division counts. box=(x,y,z), others=(rows,cols), circle=(divs,).",
+        "prim_type": "poly / polysoup / mesh / nurbs / bezier / prim / points. If the shape does not support the value, the usable values are listed.",
+        "platonic_solid": "Only when shape=\"platonic\". tetrahedron / cube / octahedron / icosahedron / dodecahedron / soccerball / teapot."
+      }
+    },
+    "create_curve": {
+      "source": "점 목록으로 곡선을 만든다.\nparent: SOP 을 담을 네트워크. 예: /obj/castle\npoints: 점 좌표 목록. 예: [[0,0,0], [1,2,0], [3,0,0]]\ncomment: 이 커브가 무엇인지. 필수. 영어로.\nname: 노드 이름. 역할이 드러나게. 예: tower_profile, path_spine\nclosed: 시작점과 끝점을 이을지.\ncurve_type: poly / nurbs / bezier.",
+      "source_hash": "e60f520dc17a",
+      "summary": "Creates a curve from a list of points.",
+      "args": {
+        "parent": "Network to hold the SOP. Example: /obj/castle",
+        "points": "List of point coordinates. Example: [[0,0,0], [1,2,0], [3,0,0]]",
+        "comment": "What this curve is. Required. In English.",
+        "name": "Node name, showing its role. Examples: tower_profile, path_spine",
+        "closed": "Whether to join the start and end points.",
+        "curve_type": "poly / nurbs / bezier."
+      }
+    },
+    "copy_to_points": {
+      "source": "소스 지오메트리를 타깃의 각 점에 복사한다.\nsource: 복사할 지오메트리 SOP 경로.\ntarget: 복사 위치가 될 점을 가진 SOP 경로.\ncomment: 무엇을 왜 복사하는지. 필수. 영어로.\nname: 노드 이름. 예: copy_merlons\ntarget_group: 타깃 점 중 일부만 쓸 때 그룹/패턴. 예: \"@type==1\"\npack: True 면 복사본을 패킹한다. 개수가 많으면 메모리가 크게 준다.\npivot: origin / centroid. 소스의 어디를 점에 맞출지.\nuse_target_orientation: 타깃 점의 N/up/orient 어트리뷰트로 회전할지.",
+      "source_hash": "791e28377b96",
+      "summary": "Copies source geometry onto each point of a target.",
+      "args": {
+        "source": "SOP path of the geometry to copy.",
+        "target": "SOP path whose points are the copy locations.",
+        "comment": "What is copied and why. Required. In English.",
+        "name": "Node name. Example: copy_merlons",
+        "target_group": "Group/pattern when only some target points are used. Example: \"@type==1\"",
+        "pack": "True packs the copies. Saves a lot of memory for large counts.",
+        "pivot": "origin / centroid. Which part of the source is placed on the point.",
+        "use_target_orientation": "Whether to rotate by the target points' N/up/orient attributes."
+      }
+    },
+    "bevel": {
+      "source": "에지나 점을 깎는다(PolyBevel). 전후 포인트·프림 수를 비교해 돌려준다.\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 깎는지. 필수. 영어로. 예: \"Soften wall top edges, 0.05\"\noffset: 깎는 폭. 지오메트리 크기 대비 너무 크면 폴리곤이 뒤집힌다.\ngroup: 대상 패턴. 에지는 \"*\" 또는 \"p0-1 p1-2\", 점/프림은 번호 범위.\ngroup_type: edges / points / prims / guess.\ndivisions: 필렛 분할 수. 1 이면 챔퍼처럼 각지고, 키우면 둥글어진다.\nshape: round / chamfer / crease / solid / none.\nname: 노드 이름. 역할이 드러나게. 예: bevel_wall_top",
+      "source_hash": "b4cc2e0ec2b4",
+      "summary": "Bevels edges or points (PolyBevel). Returns a before/after comparison of point and primitive counts.",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is bevelled and why. Required. In English. Example: \"Soften wall top edges, 0.05\"",
+        "offset": "Bevel width. Too large relative to the geometry flips polygons.",
+        "group": "Target pattern. Edges as \"*\" or \"p0-1 p1-2\", points/prims as number ranges.",
+        "group_type": "edges / points / prims / guess.",
+        "divisions": "Fillet divisions. 1 gives a sharp chamfer; more makes it rounder.",
+        "shape": "round / chamfer / crease / solid / none.",
+        "name": "Node name, showing its role. Example: bevel_wall_top"
+      }
+    },
+    "extrude_faces": {
+      "source": "면을 밀어낸다(PolyExtrude). 인셋만 하려면 distance=0, inset>0 을 준다.\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 밀어내는지. 필수. 영어로. 예: \"Extrude merlon tops 0.4 up\"\ndistance: 밀어내는 거리. 음수면 안쪽으로 판다.\ninset: 밀어낸 면을 안쪽으로 줄이는 양. 양수면 좁아진다.\ngroup: 대상 프림 패턴. 비우면 전부.\ndivisions: 옆면 분할 수.\nsplit_type: elements(면 하나씩) / components(붙은 덩어리째).\noutput_front: 밀어낸 앞면을 남길지.\noutput_side: 옆면을 만들지.\noutput_back: 원래 자리의 뒷면을 남길지. 속을 파낼 때 켠다.\nname: 노드 이름. 예: extrude_merlon_tops",
+      "source_hash": "bc42fdcb4153",
+      "summary": "Extrudes faces (PolyExtrude). For an inset only, give distance=0 and inset>0.",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is extruded and why. Required. In English. Example: \"Extrude merlon tops 0.4 up\"",
+        "distance": "Extrusion distance. Negative values cut inward.",
+        "inset": "How much the extruded face shrinks inward. Positive values make it narrower.",
+        "group": "Target primitive pattern. Everything if empty.",
+        "divisions": "Side face divisions.",
+        "split_type": "elements (one face at a time) / components (connected pieces together).",
+        "output_front": "Whether to keep the extruded front faces.",
+        "output_side": "Whether to create side faces.",
+        "output_back": "Whether to keep the back faces in the original place. Turn on when hollowing out.",
+        "name": "Node name. Example: extrude_merlon_tops"
+      }
+    },
+    "bridge_edges": {
+      "source": "두 에지 루프 사이에 면을 만든다(PolyBridge).\npath: 입력 SOP 경로. 양쪽 루프가 모두 이 지오메트리에 있어야 한다.\ncomment: 무엇을 잇는지. 필수. 영어로.\nsource_group: 시작 루프의 에지/프림 그룹 이름 또는 패턴.\ndestination_group: 끝 루프의 에지/프림 그룹 이름 또는 패턴.\ndivisions: 잇는 구간의 분할 수.\nkeep_input: 원래 지오메트리를 함께 남길지.\nname: 노드 이름. 예: bridge_tower_to_wall",
+      "source_hash": "700375267a48",
+      "summary": "Creates faces between two edge loops (PolyBridge).",
+      "args": {
+        "path": "Input SOP path. Both loops must be in this geometry.",
+        "comment": "What is bridged. Required. In English.",
+        "source_group": "Edge/primitive group name or pattern of the start loop.",
+        "destination_group": "Edge/primitive group name or pattern of the end loop.",
+        "divisions": "Divisions along the bridged span.",
+        "keep_input": "Whether to keep the original geometry as well.",
+        "name": "Node name. Example: bridge_tower_to_wall"
+      }
+    },
+    "mirror_geometry": {
+      "source": "평면을 기준으로 지오메트리를 반사한다.\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 미러하는지. 필수. 영어로.\ndirection: 반사 평면의 법선 (x,y,z). 기본 (1,0,0) — YZ 평면 대칭.\norigin: 반사 평면이 지나는 점 (x,y,z). 기본 원점.\nkeep_original: 원본을 함께 남길지. False 면 반사본만 남는다.\nconsolidate: 평면 위에서 겹친 점을 붙일지. 대칭 모델링의 이음매를 없앤다.\ngroup: 대상 프림 패턴. 비우면 전부.\nname: 노드 이름. 예: mirror_wall_east",
+      "source_hash": "df3bfb8eb876",
+      "summary": "Reflects geometry across a plane.",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is mirrored and why. Required. In English.",
+        "direction": "Normal of the reflection plane (x,y,z). Default (1,0,0) — symmetric across the YZ plane.",
+        "origin": "Point the reflection plane passes through (x,y,z). Default origin.",
+        "keep_original": "Whether to keep the original. False keeps only the reflection.",
+        "consolidate": "Whether to fuse overlapping points on the plane, removing the seam of symmetric modelling.",
+        "group": "Target primitive pattern. Everything if empty.",
+        "name": "Node name. Example: mirror_wall_east"
+      }
+    },
+    "revolve_profile": {
+      "source": "프로파일 커브를 축 둘레로 돌려 회전체를 만든다(선반/lathe).\npath: 프로파일 커브를 내보내는 SOP 경로.\ncomment: 무엇을 만드는지. 필수. 영어로. 예: \"Revolve tower profile into cone roof\"\naxis: 회전축 방향 (x,y,z). 기본 (0,1,0) — Y축.\norigin: 축이 지나는 점 (x,y,z). 기본 원점.\ndivisions: 둘레 분할 수. 클수록 매끄럽다.\nbegin_angle: 시작 각도(도). 부분 회전체를 만들 때.\nend_angle: 끝 각도(도). 360 이면 한 바퀴.\ncap: 부분 회전체의 끝을 막을지.\nname: 노드 이름. 예: revolve_tower_roof",
+      "source_hash": "059f6cffe5f9",
+      "summary": "Revolves a profile curve around an axis to make a surface of revolution (lathe).",
+      "args": {
+        "path": "SOP path that outputs the profile curve.",
+        "comment": "What is being made. Required. In English. Example: \"Revolve tower profile into cone roof\"",
+        "axis": "Rotation axis direction (x,y,z). Default (0,1,0) — the Y axis.",
+        "origin": "Point the axis passes through (x,y,z). Default origin.",
+        "divisions": "Divisions around. More is smoother.",
+        "begin_angle": "Start angle (degrees), for partial revolutions.",
+        "end_angle": "End angle (degrees). 360 is a full turn.",
+        "cap": "Whether to cap the ends of a partial revolution.",
+        "name": "Node name. Example: revolve_tower_roof"
+      }
+    },
+    "skin_sections": {
+      "source": "단면 커브들 사이에 면을 씌운다(Skin/loft).\npath: 단면 커브들을 내보내는 SOP 경로. 프림 순서대로 이어진다.\ncomment: 무엇을 씌우는지. 필수. 영어로.\nclose_along_sections: 마지막 단면과 첫 단면을 이을지.\nname: 노드 이름. 예: skin_roof_sections",
+      "source_hash": "6512295c105f",
+      "summary": "Skins faces between section curves (Skin/loft).",
+      "args": {
+        "path": "SOP path that outputs the section curves. They are joined in primitive order.",
+        "comment": "What is skinned. Required. In English.",
+        "close_along_sections": "Whether to join the last section to the first.",
+        "name": "Node name. Example: skin_roof_sections"
+      }
+    },
+    "boolean_op": {
+      "source": "두 메시로 불리언 연산을 한다(Boolean SOP).\npath_a: A 입력 SOP 경로.\npath_b: B 입력 SOP 경로.\ncomment: 무엇을 왜 자르는지. 필수. 영어로. 예: \"Cut window openings out of wall body\"\noperation: union / intersect / subtract / shatter / seam.\nsubtract_order: operation=\"subtract\" 일 때 aminusb / bminusa / both.\na_is_solid: A 를 속이 찬 입체로 볼지. False 면 표면으로 본다.\nb_is_solid: B 를 속이 찬 입체로 볼지.\nname: 노드 이름. 예: cut_windows",
+      "source_hash": "c01d3cbc46a4",
+      "summary": "Performs a boolean operation on two meshes (Boolean SOP).",
+      "args": {
+        "path_a": "SOP path of input A.",
+        "path_b": "SOP path of input B.",
+        "comment": "What is cut and why. Required. In English. Example: \"Cut window openings out of wall body\"",
+        "operation": "union / intersect / subtract / shatter / seam.",
+        "subtract_order": "When operation=\"subtract\": aminusb / bminusa / both.",
+        "a_is_solid": "Whether to treat A as a solid volume. False treats it as a surface.",
+        "b_is_solid": "Whether to treat B as a solid volume.",
+        "name": "Node name. Example: cut_windows"
+      }
+    },
+    "convert_geometry": {
+      "source": "프리미티브 타입을 바꾼다(Convert SOP).\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 바꾸는지. 필수. 영어로.\nto_type: poly / polySoup / mesh / nurbCurve / nurbSurf / bezCurve / bezSurf / volume / vdb 등. 잘못 주면 쓸 수 있는 값을 알려 준다.\nfrom_type: 바꿀 대상 타입. all 이면 전부.\ngroup: 대상 프림 패턴. 비우면 전부.\nname: 노드 이름. 예: convert_sphere_to_poly",
+      "source_hash": "54956230633d",
+      "summary": "Changes primitive types (Convert SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is converted and why. Required. In English.",
+        "to_type": "poly / polySoup / mesh / nurbCurve / nurbSurf / bezCurve / bezSurf / volume / vdb and so on. A wrong value gets the list of usable values.",
+        "from_type": "Type to convert. all means everything.",
+        "group": "Target primitive pattern. Everything if empty.",
+        "name": "Node name. Example: convert_sphere_to_poly"
+      }
+    },
+    "triangulate": {
+      "source": "폴리곤을 삼각형(또는 지정한 변 수 이하)으로 쪼갠다(Divide SOP).\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 삼각화하는지. 필수. 영어로.\nmax_sides: 폴리곤 한 개의 최대 변 수. 3 이면 완전 삼각화.\navoid_slivers: 가늘고 긴 삼각형이 나오지 않게 할지.\ngroup: 대상 프림 패턴. 비우면 전부.\nname: 노드 이름. 예: triangulate_for_export",
+      "source_hash": "50b06433cab0",
+      "summary": "Splits polygons into triangles (or up to a given number of sides) (Divide SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is triangulated and why. Required. In English.",
+        "max_sides": "Maximum sides per polygon. 3 means full triangulation.",
+        "avoid_slivers": "Whether to avoid long thin triangles.",
+        "group": "Target primitive pattern. Everything if empty.",
+        "name": "Node name. Example: triangulate_for_export"
+      }
+    },
+    "remesh_geometry": {
+      "source": "삼각형 크기를 고르게 다시 짠다(Remesh SOP).\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 리메시하는지. 필수. 영어로.\ntarget_size: 목표 에지 길이. 작을수록 촘촘하고 무겁다.\niterations: 반복 횟수. 클수록 고르지만 느리다.\nsmoothing: 스무딩 정도 0~1. 크면 형태가 뭉개진다.\ngroup: 대상 프림 패턴. 비우면 전부.\nname: 노드 이름. 예: remesh_rock_surface",
+      "source_hash": "dbc7066c567b",
+      "summary": "Rebuilds the mesh with evenly sized triangles (Remesh SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is remeshed and why. Required. In English.",
+        "target_size": "Target edge length. Smaller is denser and heavier.",
+        "iterations": "Number of iterations. More is more even but slower.",
+        "smoothing": "Smoothing amount 0–1. High values soften the shape.",
+        "group": "Target primitive pattern. Everything if empty.",
+        "name": "Node name. Example: remesh_rock_surface"
+      }
+    },
+    "reduce_polygons": {
+      "source": "폴리곤 수를 줄인다(PolyReduce SOP).\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 줄이는지. 필수. 영어로.\ntarget: mode 가 percent 계열이면 퍼센트(0~100), count 계열이면 개수.\nmode: poly_percent / pt_percent / poly_count / pt_count.\ngroup: 대상 프림 패턴. 비우면 전부.\nname: 노드 이름. 예: reduce_rock_lod1",
+      "source_hash": "540c227550ba",
+      "summary": "Reduces the polygon count (PolyReduce SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is reduced and why. Required. In English.",
+        "target": "A percentage (0–100) for the percent modes, a count for the count modes.",
+        "mode": "poly_percent / pt_percent / poly_count / pt_count.",
+        "group": "Target primitive pattern. Everything if empty.",
+        "name": "Node name. Example: reduce_rock_lod1"
+      }
+    },
+    "transform_geometry": {
+      "source": "지오메트리(또는 그 일부)를 옮기고 돌리고 키운다(Transform SOP).\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 옮기는지. 필수. 영어로.\ntranslate: 이동 (x,y,z).\nrotate: 회전 (rx,ry,rz) 도 단위.\nscale: 배율 (sx,sy,sz).\npivot: 회전·배율의 기준점 (x,y,z).\ngroup: 대상 패턴. 비우면 전부.\ngroup_type: guess / points / prims / edges / breakpoints.\nname: 노드 이름. 예: place_tower_northwest",
+      "source_hash": "98edeefea7c8",
+      "summary": "Moves, rotates and scales geometry or part of it (Transform SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is moved and why. Required. In English.",
+        "translate": "Translation (x,y,z).",
+        "rotate": "Rotation (rx,ry,rz) in degrees.",
+        "scale": "Scale (sx,sy,sz).",
+        "pivot": "Pivot for rotation and scale (x,y,z).",
+        "group": "Target pattern. Everything if empty.",
+        "group_type": "guess / points / prims / edges / breakpoints.",
+        "name": "Node name. Example: place_tower_northwest"
+      }
+    },
+    "delete_geometry": {
+      "source": "그룹이나 패턴에 걸린 것을 지운다(Blast SOP).\npath: 입력 SOP 경로.\ncomment: 무엇을 왜 지우는지. 필수. 영어로.\ngroup: 지울 대상 그룹 이름 또는 패턴. 예: \"@name=debris*\", \"0-5\"\ngroup_type: guess / points / prims / edges / breakpoints.\nkeep_selected: True 면 걸린 것만 남기고 나머지를 지운다.\ndelete_unused_points: 프림을 지운 뒤 남은 외톨이 점도 지울지.\nname: 노드 이름. 예: remove_inner_faces",
+      "source_hash": "6ff9ed2eddcc",
+      "summary": "Deletes what a group or pattern matches (Blast SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What is deleted and why. Required. In English.",
+        "group": "Group name or pattern to delete. Examples: \"@name=debris*\", \"0-5\"",
+        "group_type": "guess / points / prims / edges / breakpoints.",
+        "keep_selected": "True keeps only the matches and deletes the rest.",
+        "delete_unused_points": "Whether to also delete points left orphaned after deleting primitives.",
+        "name": "Node name. Example: remove_inner_faces"
+      }
+    },
+    "attrib_stats": {
+      "source": "어트리뷰트 전체의 분포를 통계로 돌려준다.\npath: SOP 노드 경로.\nname: 어트리뷰트 이름. 예: P, N, Cd, pscale\nowner: point / prim / vertex / detail.\nbins: 히스토그램 구간 수. 최대 64.",
+      "source_hash": "6b3da1efbb6a",
+      "summary": "Returns statistics about the distribution of a whole attribute.",
+      "args": {
+        "path": "SOP node path.",
+        "name": "Attribute name. Examples: P, N, Cd, pscale",
+        "owner": "point / prim / vertex / detail.",
+        "bins": "Number of histogram bins. Up to 64."
+      }
+    },
+    "export_attribute": {
+      "source": "어트리뷰트 값 전체를 .npy 파일로 쓰고 경로를 돌려준다.\npath: SOP 노드 경로.\nname: 어트리뷰트 이름.\nfile_path: 저장할 .npy 경로. 확장자가 없으면 붙여 준다. $HIP 같은 변수를 그대로 쓴다.\nowner: point / prim / vertex.",
+      "source_hash": "9b3f1f665841",
+      "summary": "Writes all values of an attribute to a .npy file and returns the path.",
+      "args": {
+        "path": "SOP node path.",
+        "name": "Attribute name.",
+        "file_path": ".npy path to save to. The extension is added if missing. Variables such as $HIP are kept as is.",
+        "owner": "point / prim / vertex."
+      }
+    },
+    "add_normals": {
+      "source": "노멀을 만든다(Normal SOP). 이미 있으면 덮어쓰기 전에 알려 준다.\npath: 입력 SOP 경로.\ncomment: 왜 노멀이 필요한지. 필수. 영어로.\nowner: point / vertex / prim / detail. 어디에 N 을 달지.\ncusp_angle: 이 각도(도)보다 크게 꺾이면 날카롭게 유지한다.\nweighting: angle(꼭짓점 각도) / area(면적) / uniform(균등).\ngroup: 대상 패턴. 비우면 전부.\nname: 노드 이름. 예: smooth_wall_normals",
+      "source_hash": "d1fdf970ca97",
+      "summary": "Creates normals (Normal SOP). Warns before overwriting existing ones.",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "Why normals are needed. Required. In English.",
+        "owner": "point / vertex / prim / detail. Where N goes.",
+        "cusp_angle": "Bends sharper than this angle (degrees) stay hard.",
+        "weighting": "angle (corner angle) / area / uniform.",
+        "group": "Target pattern. Everything if empty.",
+        "name": "Node name. Example: smooth_wall_normals"
+      }
+    },
+    "create_attribute": {
+      "source": "어트리뷰트를 만들어 상수 값을 채운다(AttribCreate SOP).\npath: 입력 SOP 경로.\ncomment: 이 어트리뷰트가 왜 필요한지. 필수. 영어로.\nattrib_name: 만들 어트리뷰트 이름. 예: pscale, variant, lod\nowner: point / prim / vertex / detail.\nattrib_type: float / int / vector / string.\nvalue: 채울 값. float/int 는 숫자 하나, vector 는 값 3개, string 은 문자열.\ngroup: 대상 패턴. 비우면 전부.\nname: 노드 이름. 예: set_merlon_scale",
+      "source_hash": "40b2cf164a93",
+      "summary": "Creates an attribute filled with a constant value (AttribCreate SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "Why this attribute is needed. Required. In English.",
+        "attrib_name": "Name of the attribute to create. Examples: pscale, variant, lod",
+        "owner": "point / prim / vertex / detail.",
+        "attrib_type": "float / int / vector / string.",
+        "value": "Value to fill. One number for float/int, three values for vector, a string for string.",
+        "group": "Target pattern. Everything if empty.",
+        "name": "Node name. Example: set_merlon_scale"
+      }
+    },
+    "create_group": {
+      "source": "그룹을 만들고 **실제로 몇 개가 걸렸는지** 돌려준다(GroupCreate SOP).\npath: 입력 SOP 경로.\ncomment: 이 그룹이 무엇을 위한 것인지. 필수. 영어로. 예: \"Top faces of wall, for merlon placement\"\ngroup_name: 만들 그룹 이름. 역할이 드러나게, 영어로. 예: wall_top_faces\ngroup_type: point / prim / edge / vertex.\npattern: 번호 범위나 표현식. 비우고 bounding_box 나 normal_direction 만 쓸 수도 있다.\nbounding_box: (중심x, 중심y, 중심z, 크기x, 크기y, 크기z) 6개.\nnormal_direction: 기준 방향 (x,y,z).\nnormal_angle: normal_direction 에서 몇 도까지 받아줄지.\nkeep_by_normals: normal_direction 을 쓸지. normal_direction 을 주면 자동으로 켜진다.\nname: 노드 이름. 예: group_wall_top",
+      "source_hash": "a0205c664567",
+      "summary": "Creates a group and returns **how many elements actually matched** (GroupCreate SOP).",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What this group is for. Required. In English. Example: \"Top faces of wall, for merlon placement\"",
+        "group_name": "Name of the group to create, showing its role, in English. Example: wall_top_faces",
+        "group_type": "point / prim / edge / vertex.",
+        "pattern": "Number range or expression. Can be left empty to use only bounding_box or normal_direction.",
+        "bounding_box": "Six values (center x, center y, center z, size x, size y, size z).",
+        "normal_direction": "Reference direction (x,y,z).",
+        "normal_angle": "How many degrees away from normal_direction are accepted.",
+        "keep_by_normals": "Whether to use normal_direction. Turned on automatically when normal_direction is given.",
+        "name": "Node name. Example: group_wall_top"
+      }
+    },
+    "group_members": {
+      "source": "그룹에 무엇이 들었는지 돌려준다. 큰 그룹은 범위로 접어서 준다.\npath: SOP 노드 경로.\ngroup_name: 그룹 이름.\ngroup_type: point / prim / edge / vertex.\nmax_ranges: 돌려줄 범위 개수 상한. 최대 100.",
+      "source_hash": "da423860cc19",
+      "summary": "Returns what a group contains. Large groups are folded into ranges.",
+      "args": {
+        "path": "SOP node path.",
+        "group_name": "Group name.",
+        "group_type": "point / prim / edge / vertex.",
+        "max_ranges": "Maximum number of ranges returned. Up to 100."
+      }
+    },
+    "uv_report": {
+      "source": "UV 가 제대로 깔렸는지 확인한다.\npath: SOP 노드 경로.\nuv_attrib: UV 어트리뷰트 이름. 기본 uv.",
+      "source_hash": "2ca2d05c4ed0",
+      "summary": "Checks whether UVs are laid out properly.",
+      "args": {
+        "path": "SOP node path.",
+        "uv_attrib": "UV attribute name. Default uv."
+      }
+    },
+    "uv_project": {
+      "source": "투영으로 UV 를 만든다(UVProject SOP). 만든 뒤 UV 품질까지 확인해 돌려준다.\npath: 입력 SOP 경로.\ncomment: 무엇에 왜 UV 를 까는지. 필수. 영어로.\nprojection: texture(정사영) / polar / cylin(원통) / torus / wrap.\nuv_attrib: 만들 UV 어트리뷰트 이름.\nfit_to_bounds: 투영 기준을 입력 바운딩 박스에 맞춰 UV 가 0~1 에 들어오게 할지. translate/scale 을 직접 주면 그쪽이 이긴다.\ntranslate: 투영 기준의 이동 (x,y,z).\nrotate: 투영 기준의 회전 (rx,ry,rz) 도 단위. 정사영 방향을 이걸로 돌린다.\nscale: 투영 기준의 배율 (sx,sy,sz).\ngroup: 대상 프림 패턴. 비우면 전부.\nname: 노드 이름. 예: uv_wall_front",
+      "source_hash": "e986a67afa24",
+      "summary": "Creates UVs by projection (UVProject SOP) and returns a check of UV quality afterwards.",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What gets UVs and why. Required. In English.",
+        "projection": "texture (orthographic) / polar / cylin (cylindrical) / torus / wrap.",
+        "uv_attrib": "Name of the UV attribute to create.",
+        "fit_to_bounds": "Whether to fit the projection to the input bounding box so UVs fall in 0–1. Explicit translate/scale win.",
+        "translate": "Translation of the projection frame (x,y,z).",
+        "rotate": "Rotation of the projection frame (rx,ry,rz) in degrees. Turns the orthographic direction.",
+        "scale": "Scale of the projection frame (sx,sy,sz).",
+        "group": "Target primitive pattern. Everything if empty.",
+        "name": "Node name. Example: uv_wall_front"
+      }
+    },
+    "auto_uv": {
+      "source": "UV 를 자동으로 펴고 0~1 안에 배치한다. 결과 품질까지 확인해 돌려준다.\npath: 입력 SOP 경로.\ncomment: 무엇에 왜 UV 를 까는지. 필수. 영어로.\nmethod: flatten(펴기+배치) / unwrap(육면 투영).\nuv_attrib: 만들 UV 어트리뷰트 이름.\npack_scale: 배치 후 전체 배율. 1.0 이면 0~1 을 채운다.\npadding: 아일랜드 사이 여백. 텍스처 픽셀 수로 준다. UVLayout 은 픽셀을 그대로 받고, UVUnwrap 은 UV 비율만 받으므로 1024 로 나눠 넘긴다.\ngroup: 대상 프림 패턴. 비우면 전부.\nname: 노드 이름. 예: uv_rock_auto",
+      "source_hash": "8c9426a96409",
+      "summary": "Automatically flattens UVs and lays them out in 0–1, returning a check of the result quality.",
+      "args": {
+        "path": "Input SOP path.",
+        "comment": "What gets UVs and why. Required. In English.",
+        "method": "flatten (flatten + layout) / unwrap (box projection).",
+        "uv_attrib": "Name of the UV attribute to create.",
+        "pack_scale": "Overall scale after layout. 1.0 fills 0–1.",
+        "padding": "Margin between islands in texture pixels. UVLayout takes pixels as is; UVUnwrap takes only a UV fraction, so the value is divided by 1024.",
+        "group": "Target primitive pattern. Everything if empty.",
+        "name": "Node name. Example: uv_rock_auto"
+      }
+    },
+    "nearest_point": {
+      "source": "주어진 위치에 가장 가까운 포인트를 찾는다.\npath: SOP 노드 경로.\nposition: 기준 위치 (x,y,z).\ncount: 몇 개를 찾을지. 최대 100.\nmax_radius: 이 반경 밖은 보지 않는다. 생략하면 제한 없음.\npoint_group: 이 그룹 안에서만 찾는다. 그룹 이름 또는 패턴.",
+      "source_hash": "f5b2608ac955",
+      "summary": "Finds the points closest to a given position.",
+      "args": {
+        "path": "SOP node path.",
+        "position": "Reference position (x,y,z).",
+        "count": "How many to find. Up to 100.",
+        "max_radius": "Nothing outside this radius is considered. No limit if omitted.",
+        "point_group": "Search only inside this group. Group name or pattern."
+      }
+    },
+    "nearest_prim": {
+      "source": "주어진 위치에 가장 가까운 프리미티브와 그 위의 최근접 점을 찾는다.\npath: SOP 노드 경로.\nposition: 기준 위치 (x,y,z).",
+      "source_hash": "e405737e6a7c",
+      "summary": "Finds the primitive closest to a given position and the closest point on it.",
+      "args": {
+        "path": "SOP node path.",
+        "position": "Reference position (x,y,z)."
+      }
+    },
+    "ray_intersect": {
+      "source": "지오메트리에 레이를 쏴서 맞는 지점을 찾는다.\npath: SOP 노드 경로.\norigin: 레이 시작점 (x,y,z).\ndirection: 레이 방향 (x,y,z). 정규화하지 않아도 된다.\nmax_distance: 이 거리까지만 본다. 생략하면 제한 없음.",
+      "source_hash": "bc95a31f2356",
+      "summary": "Casts a ray at geometry and finds where it hits.",
+      "args": {
+        "path": "SOP node path.",
+        "origin": "Ray origin (x,y,z).",
+        "direction": "Ray direction (x,y,z). Need not be normalised.",
+        "max_distance": "Only up to this distance. No limit if omitted."
+      }
+    },
+    "prim_intrinsics": {
+      "source": "프리미티브의 인트린식을 읽는다.\npath: SOP 노드 경로.\nprim_number: 볼 프리미티브 번호.\nnames: 읽을 인트린식 이름들. 생략하면 전부(최대 60개).",
+      "source_hash": "8904ab17f599",
+      "summary": "Reads a primitive's intrinsics.",
+      "args": {
+        "path": "SOP node path.",
+        "prim_number": "Primitive number to inspect.",
+        "names": "Intrinsic names to read. All (up to 60) if omitted."
+      }
+    },
+    "volume_info": {
+      "source": "볼륨/VDB 프리미티브의 해상도·복셀 크기·값 범위를 돌려준다.\npath: SOP 노드 경로.\nprim_number: 볼 프리미티브 번호. 생략하면 볼륨 프림 전부를 돌려준다.",
+      "source_hash": "465f99ff6651",
+      "summary": "Returns resolution, voxel size and value range of volume/VDB primitives.",
+      "args": {
+        "path": "SOP node path.",
+        "prim_number": "Primitive number to inspect. All volume primitives if omitted."
+      }
+    }
+  }
+}

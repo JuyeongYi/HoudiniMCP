@@ -2,7 +2,7 @@
 
 새 팩을 만들 때 이 팩을 복사해서 시작하면 된다. 필요한 파일은 넷뿐이다.
 
-    houdini_mcp_<도메인>.json                              패키지 정의
+    packages/houdini_mcp_<도메인>.json                     패키지 정의
     houdini_mcp_<도메인>/python3.13libs/pythonrc.py        등록 진입점
     houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/__init__.py
     houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/<모듈>.py   <- 이 파일

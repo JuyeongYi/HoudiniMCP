@@ -1,0 +1,25 @@
+{
+  "pack": "houdini_mcp_example",
+  "overview": {
+    "text": {
+      "source": "툴 팩을 만드는 법을 보여주는 최소 예시 팩.\n\nTOOL_MODULES 에 툴이 든 모듈 이름을 적으면 register_pack 이 하나씩 읽는다.\n모듈을 여기서 import 하지 않는 이유는, 하나가 깨져도 나머지가 등록되게 하기\n위해서다.",
+      "source_hash": "e2c4097b2473",
+      "en": "Minimal example pack showing how to write a tool pack.\n\nList the names of the modules that contain tools in TOOL_MODULES and register_pack loads them one\nby one. Modules are not imported here so that one broken module does not stop the rest from\nregistering."
+    }
+  },
+  "modules": {
+    "tools": {
+      "source": "툴 팩을 만드는 법을 보여주는 최소 예시.",
+      "source_hash": "2a770227d8b8",
+      "en": "Minimal example showing how to write a tool pack."
+    }
+  },
+  "tools": {
+    "tool_catalog": {
+      "source": "등록된 모든 툴의 이름, 설명, 소속 팩.",
+      "source_hash": "4d648683fec2",
+      "summary": "Name, description and pack of every registered tool.",
+      "args": {}
+    }
+  }
+}

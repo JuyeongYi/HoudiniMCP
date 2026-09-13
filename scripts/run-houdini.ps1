@@ -94,18 +94,28 @@ if ($HfsPath) {
 
 $exe = Join-Path $hfs "bin\houdini.exe"
 
-# 패키지 JSON 을 찾을 디렉토리. repo 루트에 houdini_mcp.json 이 있다.
-$packageDir = $RepoRoot
+# 패키지 JSON 은 repo 의 packages/ 에 모여 있다. JSON 은 $HOUDINI_PACKAGE_PATH/.. 로
+# repo 루트의 팩 디렉토리를 가리키므로, JSON 만 다른 디렉토리로 복사하면 경로가 깨진다.
+$packageDir = Join-Path $RepoRoot "packages"
 
 if ($NoTools) {
-    # 툴 팩 JSON 만 빼려면 서버 JSON 만 담은 임시 디렉토리를 쓴다.
-    $tempPkg = Join-Path ([System.IO.Path]::GetTempPath()) ("hmcp_pkg_" + [guid]::NewGuid().ToString("N").Substring(0, 8))
-    New-Item -ItemType Directory -Path $tempPkg | Out-Null
-    Copy-Item (Join-Path $RepoRoot "houdini_mcp.json") $tempPkg
-    $packageDir = $tempPkg
+    # 툴 팩만 빼려면 서버 JSON 하나만 담은 디렉토리를 쓴다. 상대 경로가 유지되도록
+    # repo 루트 바로 아래(packages 의 형제)에 만든다. git 에는 build/ 로 무시된다.
+    $packageDir = Join-Path $RepoRoot "build\packages_server_only"
+    New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+    Get-ChildItem -Path $packageDir -Filter "*.json" | Remove-Item -Force
+    Copy-Item (Join-Path $RepoRoot "packages\houdini_mcp.json") $packageDir
 }
 
-$env:HOUDINI_PACKAGE_DIR = $packageDir
+# 덮어쓰지 않고 앞에 붙인다. 사용자가 이미 지정한 패키지 디렉토리(다른 플러그인)를
+# 그대로 살린다. 이 스크립트는 Windows 전용이라 구분자는 PathSeparator(;) 다.
+$sep = [System.IO.Path]::PathSeparator
+if ($env:HOUDINI_PACKAGE_DIR) {
+    $existing = $env:HOUDINI_PACKAGE_DIR.Split($sep) | Where-Object { $_ -and ($_ -ne $packageDir) }
+    $env:HOUDINI_PACKAGE_DIR = (@($packageDir) + @($existing)) -join $sep
+} else {
+    $env:HOUDINI_PACKAGE_DIR = $packageDir
+}
 $env:HOUDINI_MCP_PORT = "$Port"
 
 if ($IsolatePrefs) {

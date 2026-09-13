@@ -1,0 +1,234 @@
+{
+  "pack": "houdini_mcp_mat",
+  "overview": {
+    "text": {
+      "source": "머티리얼·룩데브 전문 툴 팩.\n\n셰이더를 만들고, 잇고, 할당하고, 텍스처를 붙이는 것을 담는다. 노드를 만들고\n잇는 데서 끝내지 않고 Houdini 22 에 번들된 전문 라이브러리로 결과를 확인한다.\n\n    MaterialX 1.39.5   셰이더 그래프 검증과 프리셋 저장 포맷\n    OpenImageIO 2.5    텍스처 파일을 실제로 열어 해상도·채널·통계 확인\n    pxr (OpenUSD)      UsdShade 로 실제 바인딩 질의\n    PyOpenColorIO 2.5  컬러스페이스 목록을 OCIO 설정에서\n\n    build      머티리얼·셰이더 노드 저작과 연결\n    query      머티리얼 조회·그래프 구조·MaterialX 검증\n    assign     머티리얼 할당과 실제 바인딩 확인 (SOP 어트리뷰트 / LOP UsdShade)\n    texture    텍스처 부착과 OIIO 검사\n    color      OCIO 컬러스페이스 조회와 지정\n    preset     MaterialX 문서로 저장·불러오기\n\n`houdini_mcp_lop` 와의 경계: **머티리얼 자체는 이 팩, 스테이지 일반은 lop.**\n이 팩이 USD 를 건드리는 것은 UsdShade(머티리얼·바인딩)에 한정한다. 프림 조회,\n레이어 스택, 컴포지션, 라이트, 배리언트는 lop 팩이 맡는다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "c8b72ea5c7bc",
+      "en": "Material and look development tool pack.\n\nHolds creating, connecting and assigning shaders and attaching textures. It does not stop at\ncreating and wiring nodes: results are checked with the specialist libraries bundled with Houdini 22.\n\n    MaterialX 1.39.5   shader graph validation and the preset file format\n    OpenImageIO 2.5    actually opens texture files to check resolution, channels, statistics\n    pxr (OpenUSD)      queries real bindings through UsdShade\n    PyOpenColorIO 2.5  color space lists from the OCIO config\n\n    build      authoring and connecting material and shader nodes\n    query      material queries, graph structure, MaterialX validation\n    assign     material assignment and checking the real binding (SOP attribute / LOP UsdShade)\n    texture    attaching textures and OIIO inspection\n    color      OCIO color space queries and assignment\n    preset     saving and loading as MaterialX documents\n\nBoundary with `houdini_mcp_lop`: **materials themselves belong here, the stage in general belongs\nto lop.** This pack touches USD only through UsdShade (materials and bindings). Prim queries,\nlayer stacks, composition, lights and variants are handled by the lop pack.\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "build": {
+      "source": "머티리얼과 셰이더 그래프를 만드는 툴.",
+      "source_hash": "73a45864b0b2",
+      "en": "Tools that create materials and shader graphs."
+    },
+    "query": {
+      "source": "머티리얼을 들여다보고 검증하는 툴.",
+      "source_hash": "49ea8a9272a9",
+      "en": "Tools that inspect and validate materials."
+    },
+    "assign": {
+      "source": "머티리얼을 지오메트리에 걸고, 실제로 걸렸는지 확인하는 툴.",
+      "source_hash": "e37f1cad31cd",
+      "en": "Tools that assign materials to geometry and confirm the assignment took effect."
+    },
+    "texture": {
+      "source": "텍스처를 붙이고, 붙이기 전에 **파일을 실제로 열어 확인하는** 툴.",
+      "source_hash": "5497641149a3",
+      "en": "Tools that attach textures and **actually open the file to check it** beforehand."
+    },
+    "color": {
+      "source": "컬러 매니지먼트 툴. 목록을 하드코딩하지 않고 OCIO 설정에서 읽는다.",
+      "source_hash": "6afc8c651d6a",
+      "en": "Color management tools. Lists are read from the OCIO config, not hardcoded."
+    },
+    "preset": {
+      "source": "머티리얼을 파일로 저장하고 다시 읽는 툴. 포맷은 **MaterialX 문서**다.",
+      "source_hash": "ee9b2555bada",
+      "en": "Tools that save materials to files and read them back. The format is **a MaterialX document**."
+    }
+  },
+  "tools": {
+    "create_material": {
+      "source": "머티리얼을 만든다. 셰이더 노드와 출력 배선까지 갖춘 채로 나온다.\nparent: 머티리얼을 담을 네트워크. 예: /mat, /stage/materiallibrary1\nname: 머티리얼 이름. 역할이 드러나게. 예: wall_stone\ncomment: 이 머티리얼이 무엇을 위한 것인지. 필수. 영어로. 예: \"Weathered sandstone for the castle wall\"\nkind: materialx / karma / usdpreview / principled 중 하나.",
+      "source_hash": "96eeccbdcc5f",
+      "summary": "Creates a material, complete with shader nodes and output wiring.",
+      "args": {
+        "parent": "Network to hold the material. Examples: /mat, /stage/materiallibrary1",
+        "name": "Material name, showing its role. Example: wall_stone",
+        "comment": "What this material is for. Required. In English. Example: \"Weathered sandstone for the castle wall\"",
+        "kind": "One of materialx / karma / usdpreview / principled."
+      }
+    },
+    "connect_shader": {
+      "source": "셰이더 노드의 출력을 다른 셰이더의 입력에 **이름으로** 잇는다.\nsource: 값을 내보내는 노드. 예: /mat/wall_stone/base_color_tex\ntarget: 값을 받는 노드. 예: /mat/wall_stone/mtlxstandard_surface\nto_input: target 의 입력 이름. 예: base_color, specular_roughness\nfrom_output: source 의 출력 이름. MaterialX 노드는 대개 \"out\" 이다.",
+      "source_hash": "a034b2f3ec55",
+      "summary": "Connects a shader node output to another shader's input **by name**.",
+      "args": {
+        "source": "Node that provides the value. Example: /mat/wall_stone/base_color_tex",
+        "target": "Node that receives the value. Example: /mat/wall_stone/mtlxstandard_surface",
+        "to_input": "Input name on target. Examples: base_color, specular_roughness",
+        "from_output": "Output name on source. For MaterialX nodes it is usually \"out\"."
+      }
+    },
+    "disconnect_shader": {
+      "source": "셰이더 입력 하나를 이름으로 끊는다.\ntarget: 입력을 끊을 노드 경로.\nto_input: 끊을 입력 이름. 예: base_color",
+      "source_hash": "9e824624c189",
+      "summary": "Disconnects one shader input by name.",
+      "args": {
+        "target": "Node path whose input to disconnect.",
+        "to_input": "Input name to disconnect. Example: base_color"
+      }
+    },
+    "set_material_parms": {
+      "source": "셰이더 파라미터를 건다. 색·벡터는 리스트로 한 번에 준다.\npath: 셰이더 노드 경로. 예: /mat/wall_stone/mtlxstandard_surface\nparms: 이름과 값. 예: {\"base_color\": [0.4, 0.25, 0.1], \"specular_roughness\": 0.55, \"metalness\": 0.0}",
+      "source_hash": "958a599f60ca",
+      "summary": "Sets shader parameters. Colors and vectors are given as lists in one go.",
+      "args": {
+        "path": "Shader node path. Example: /mat/wall_stone/mtlxstandard_surface",
+        "parms": "Names and values. Example: {\"base_color\": [0.4, 0.25, 0.1], \"specular_roughness\": 0.55, \"metalness\": 0.0}"
+      }
+    },
+    "shader_inputs": {
+      "source": "셰이더 노드가 받을 수 있는 입력과 낼 수 있는 출력을 타입과 함께 준다.\npath: 셰이더 노드 경로.",
+      "source_hash": "9a921a69245d",
+      "summary": "Returns the inputs a shader node accepts and the outputs it provides, with types.",
+      "args": {
+        "path": "Shader node path."
+      }
+    },
+    "list_materials": {
+      "source": "씬의 머티리얼을 나열한다. 코멘트와 계열을 함께 준다.\nroot: 어디부터 훑을지. 기본은 씬 전체. 예: /mat, /obj/castle\nlop: LOP 노드 경로를 주면 USD 머티리얼을 대신 읽는다. 예: /stage/assign_wood\nmax_results: 돌려줄 최대 개수.",
+      "source_hash": "d05349e2bd1f",
+      "summary": "Lists the materials in the scene, with comments and family.",
+      "args": {
+        "root": "Where to start scanning. The whole scene by default. Examples: /mat, /obj/castle",
+        "lop": "Given a LOP node path, reads USD materials instead. Example: /stage/assign_wood",
+        "max_results": "Maximum number returned."
+      }
+    },
+    "material_info": {
+      "source": "머티리얼 하나를 전부 본다 — 셰이더, 연결, 텍스처, 이 머티리얼을 거는 노드.\npath: 머티리얼 노드 경로. 예: /mat/wall_stone",
+      "source_hash": "6c823632b610",
+      "summary": "Everything about one material — shaders, connections, textures and the nodes that assign it.",
+      "args": {
+        "path": "Material node path. Example: /mat/wall_stone"
+      }
+    },
+    "shader_graph": {
+      "source": "머티리얼 안의 셰이더 그래프 구조 — 노드와 연결.\npath: 머티리얼 노드 경로.\nmax_nodes: 돌려줄 노드 수 상한.",
+      "source_hash": "dbeb1721457c",
+      "summary": "Structure of the shader graph inside a material — nodes and connections.",
+      "args": {
+        "path": "Material node path.",
+        "max_nodes": "Maximum number of nodes returned."
+      }
+    },
+    "validate_material": {
+      "source": "머티리얼이 실제로 유효한지 검증한다. MaterialX 라이브러리가 판정한다.\npath: 머티리얼 노드 경로. 예: /mat/wall_stone",
+      "source_hash": "e4558279ab06",
+      "summary": "Validates that a material is actually valid, judged by the MaterialX library.",
+      "args": {
+        "path": "Material node path. Example: /mat/wall_stone"
+      }
+    },
+    "assign_material": {
+      "source": "머티리얼을 지오메트리에 걸고, **실제로 걸렸는지 확인해서** 돌려준다.\ntarget: 머티리얼을 걸 노드. SOP / LOP / OBJ 경로.\nmaterial: 머티리얼 경로. VOP 노드 경로를 주면 LOP 에서는 USD 프림 경로로 알아서 바꾼다. 예: /mat/wall_stone, /materials/wall_stone\ncomment: 만들어지는 할당 노드에 달 코멘트. 필수. 영어로. 예: \"Stone material on the wall body\"\ngroup: SOP 일 때만. 프리미티브 그룹이나 패턴. 비우면 전부.\nprim_pattern: LOP 일 때만. 프림 패턴. 비우면 %type:Mesh.",
+      "source_hash": "e2eae7352053",
+      "summary": "Assigns a material to geometry and returns it **after confirming the assignment took effect**.",
+      "args": {
+        "target": "Node to assign the material to. SOP / LOP / OBJ path.",
+        "material": "Material path. Given a VOP node path, LOPs convert it to the USD prim path automatically. Examples: /mat/wall_stone, /materials/wall_stone",
+        "comment": "Comment for the assignment node that gets created. Required. In English. Example: \"Stone material on the wall body\"",
+        "group": "SOPs only. Primitive group or pattern. Empty means everything.",
+        "prim_pattern": "LOPs only. Prim pattern. Empty means %type:Mesh."
+      }
+    },
+    "list_assignments": {
+      "source": "무엇에 어떤 머티리얼이 걸려 있는지 본다. 파라미터가 아니라 결과를 읽는다.\npath: SOP 또는 LOP 노드 경로.\nmax_prims: LOP 일 때 훑을 프림 수 상한.",
+      "source_hash": "e37c93def0b2",
+      "summary": "Shows which material is assigned to what, reading the result rather than parameters.",
+      "args": {
+        "path": "SOP or LOP node path.",
+        "max_prims": "For LOPs, maximum number of prims to scan."
+      }
+    },
+    "texture_info": {
+      "source": "텍스처 파일을 실제로 열어 해상도·채널·비트뎁스·컬러스페이스를 읽는다.\nfile: 텍스처 경로. $HIP 같은 Houdini 변수를 써도 된다. UDIM 은 <UDIM> 토큰으로. 예: $HIP/tex/wall_basecolor.<UDIM>.exr\nusage: color / scalar / normal 중 하나. 비우면 판정하지 않는다.\nstats: True 면 픽셀 통계(최소·최대·평균)까지 계산한다. 큰 파일은 느리다.",
+      "source_hash": "d4463237fe35",
+      "summary": "Actually opens a texture file to read resolution, channels, bit depth and color space.",
+      "args": {
+        "file": "Texture path. Houdini variables such as $HIP are allowed. Use the <UDIM> token for UDIMs. Example: $HIP/tex/wall_basecolor.<UDIM>.exr",
+        "usage": "One of color / scalar / normal. Empty skips the judgement.",
+        "stats": "True also computes pixel statistics (min, max, mean). Slow for large files."
+      }
+    },
+    "assign_texture": {
+      "source": "텍스처를 셰이더 입력에 붙인다. 붙이기 전에 **파일을 열어 확인한다.**\nmaterial: 머티리얼 노드 경로. 예: /mat/wall_stone\nto_input: 붙일 입력 이름. 예: base_color, specular_roughness, normal\nfile: 텍스처 경로. UDIM 은 <UDIM> 토큰으로.\ncomment: 만들어지는 텍스처 노드의 코멘트. 필수. 영어로. 예: \"Sandstone base color, 4K sRGB\"\nusage: color / scalar / normal. 주면 파일이 용도에 맞는지 판정한다.\ncolorspace: mtlximage 의 filecolorspace 에 걸 값. 비우면 건드리지 않는다. 쓸 수 있는 값은 list_color_spaces 로 본다.\nname: 만들 텍스처 노드 이름. 비우면 입력 이름에서 만든다.",
+      "source_hash": "83fbbcbf2864",
+      "summary": "Attaches a texture to a shader input. **Opens the file to check it** first.",
+      "args": {
+        "material": "Material node path. Example: /mat/wall_stone",
+        "to_input": "Input name to attach to. Examples: base_color, specular_roughness, normal",
+        "file": "Texture path. Use the <UDIM> token for UDIMs.",
+        "comment": "Comment for the texture node that gets created. Required. In English. Example: \"Sandstone base color, 4K sRGB\"",
+        "usage": "color / scalar / normal. If given, judges whether the file suits the use.",
+        "colorspace": "Value for mtlximage's filecolorspace. Empty leaves it untouched. See list_color_spaces for usable values.",
+        "name": "Name of the texture node to create. Derived from the input name if empty."
+      }
+    },
+    "reload_textures": {
+      "source": "텍스처 캐시를 비운다. 디스크에서 텍스처를 바꿨을 때 쓴다.",
+      "source_hash": "e8b5f83dd644",
+      "summary": "Clears the texture cache. Use it after changing textures on disk.",
+      "args": {}
+    },
+    "list_color_spaces": {
+      "source": "쓸 수 있는 컬러스페이스를 OCIO 설정에서 읽어 돌려준다.\npattern: 이름이나 별칭에 이 문자열이 든 것만. 비우면 전부.",
+      "source_hash": "5f8794fab2cd",
+      "summary": "Reads the usable color spaces from the OCIO config.",
+      "args": {
+        "pattern": "Only names or aliases containing this string. Everything if empty."
+      }
+    },
+    "texture_parm_colorspaces": {
+      "source": "텍스처 노드의 컬러스페이스 파라미터가 실제로 받는 값 목록.\npath: 텍스처 노드 경로. 비우면 임시 mtlximage 로 기본 메뉴를 본다.\nparm: 파라미터 이름. 비우면 filecolorspace 등을 자동으로 찾는다.",
+      "source_hash": "8bf8e216150d",
+      "summary": "The values a texture node's color space parameter actually accepts.",
+      "args": {
+        "path": "Texture node path. If empty, a temporary mtlximage shows the default menu.",
+        "parm": "Parameter name. If empty, filecolorspace and the like are found automatically."
+      }
+    },
+    "set_color_space": {
+      "source": "텍스처 노드의 컬러스페이스를 건다. 메뉴에 없는 값이면 거절한다.\npath: 텍스처 노드 경로. 예: /mat/wall_stone/base_color_tex\ncolorspace: 걸 값. 예: srgb_texture, lin_rec709, Raw\nparm: 파라미터 이름. 비우면 filecolorspace 등을 자동으로 찾는다.",
+      "source_hash": "1d7767a1fc6e",
+      "summary": "Sets a texture node's color space. Values not in the menu are rejected.",
+      "args": {
+        "path": "Texture node path. Example: /mat/wall_stone/base_color_tex",
+        "colorspace": "Value to set. Examples: srgb_texture, lin_rec709, Raw",
+        "parm": "Parameter name. If empty, filecolorspace and the like are found automatically."
+      }
+    },
+    "save_material": {
+      "source": "머티리얼을 MaterialX 문서(.mtlx)로 저장하고, 저장한 것을 다시 읽어 검증한다.\nmaterial: 머티리얼 노드 경로. 예: /mat/wall_stone\nfile: 저장할 경로. 확장자가 없으면 .mtlx 를 붙인다. 예: $HIP/materials/wall_stone.mtlx",
+      "source_hash": "92d02dd15080",
+      "summary": "Saves a material as a MaterialX document (.mtlx) and validates it by reading the saved file back.",
+      "args": {
+        "material": "Material node path. Example: /mat/wall_stone",
+        "file": "Path to save to. .mtlx is appended if there is no extension. Example: $HIP/materials/wall_stone.mtlx"
+      }
+    },
+    "list_presets": {
+      "source": "디렉토리의 MaterialX 문서를 나열한다. 안에 무엇이 들었는지까지.\ndirectory: 훑을 디렉토리. 예: $HIP/materials",
+      "source_hash": "c597b86e5df2",
+      "summary": "Lists the MaterialX documents in a directory, including what is inside them.",
+      "args": {
+        "directory": "Directory to scan. Example: $HIP/materials"
+      }
+    },
+    "load_material": {
+      "source": "MaterialX 문서를 읽어 머티리얼로 세운다. save_material 의 반대다.\nfile: 읽을 MaterialX 문서. 예: $HIP/materials/wall_stone.mtlx\nparent: 머티리얼을 만들 네트워크. 예: /mat\nname: 만들 머티리얼 이름. 역할이 드러나게. 영어로.\ncomment: 이 머티리얼이 무엇인지. 필수. 영어로.\nnodegraph: 문서에 노드그래프가 여럿일 때 고를 이름. 비우면 첫 번째.",
+      "source_hash": "ad495a3c0a06",
+      "summary": "Reads a MaterialX document and builds a material from it. The reverse of save_material.",
+      "args": {
+        "file": "MaterialX document to read. Example: $HIP/materials/wall_stone.mtlx",
+        "parent": "Network to create the material in. Example: /mat",
+        "name": "Name of the material to create, showing its role. In English.",
+        "comment": "What this material is. Required. In English.",
+        "nodegraph": "Name to pick when the document has several node graphs. The first one if empty."
+      }
+    }
+  }
+}

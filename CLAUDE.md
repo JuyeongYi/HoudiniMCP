@@ -106,10 +106,11 @@ houdini_mcp                  서버 + 레지스트리 (툴 없음)
 - 팩이 커지면 도메인을 더 쪼갠다. 다만 크기 경계는 파일 단위로 본다(전역 규칙).
   `houdini_mcp_base` 처럼 모듈이 여럿인 팩은 합계가 아니라 모듈 하나의 크기를 본다.
 
-새 팩을 만들 때 필요한 파일은 넷뿐이다:
+새 팩을 만들 때 필요한 파일은 넷뿐이다. 패키지 JSON 은 `packages/` 에 모으고,
+`$HOUDINI_PACKAGE_PATH/../houdini_mcp_<도메인>` 으로 루트의 팩 디렉토리를 가리킨다:
 
 ```
-houdini_mcp_<도메인>.json                                패키지 정의
+packages/houdini_mcp_<도메인>.json                       패키지 정의
 houdini_mcp_<도메인>/python3.13libs/pythonrc.py          등록 진입점
 houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/__init__.py
 houdini_mcp_<도메인>/python3.13libs/houdini_mcp_<도메인>/<모듈>.py

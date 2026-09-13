@@ -1,0 +1,118 @@
+{
+  "pack": "houdini_mcp_io",
+  "overview": {
+    "text": {
+      "source": "임포트·익스포트·의존성 툴 팩 — 씬과 디스크 사이를 오간다.\n\n    export       네이티브 지오메트리 내보내기와 포맷 안내. 전부 **쓴 뒤 다시 읽어 검증**한다\n    usd          USD 내보내기. LOP 스테이지를 pxr 로 쓰고 다시 연다\n    interchange  Alembic·FBX 내보내기. abcinfo·시그니처로 검증한다\n    load         파일을 씬으로 들이기(`import` 는 예약어라 모듈명이 load 다)\n\n이 팩이 기존 구현과 갈라지는 지점은 쓰고 끝내지 않는다는 것이다.\n\n1. **쓰고 끝내지 않는다.** 내보낸 파일을 포맷에 맞는 리더로 다시 열어\n   점·프리미티브 수를 대조한다. 안 맞으면 안 맞는다고 돌려준다.\n   `hou.Geometry.saveToFile()` 은 `.usd` / `.abc` / `.fbx` 확장자를 받고도\n   내용은 ASCII `.geo` 를 쓴다(실측 확인). 다시 읽어 보지 않으면 이 거짓말을\n   못 잡는다.\n씬의 파일 참조 목록·수집·경로 치환·이식성 판정은 컨텍스트를 가리지 않아\nhoudini_mcp_base 의 `deps` / `portability` 로 옮겼다. 이미지 텍스처의 내용은\nhoudini_mcp_mat 의 `texture_info` 가 다룬다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "210b2ed84996",
+      "en": "Import, export and dependency tool pack — moves between the scene and disk.\n\n    export       native geometry export and format guidance. Everything is **read back and verified after writing**\n    usd          USD export. Writes LOP stages with pxr and reopens them\n    interchange  Alembic and FBX export. Verified with abcinfo and file signatures\n    load         bringing files into the scene (the module is named load because `import` is reserved)\n\nWhere this pack departs from existing implementations is that it does not stop at writing.\n\n1. **It does not stop at writing.** The exported file is reopened with a reader for its format\n   and the point and primitive counts are compared. If they do not match, the tool says so.\n   `hou.Geometry.saveToFile()` accepts `.usd` / `.abc` / `.fbx` extensions but writes ASCII\n   `.geo` content (measured). Without reading the file back, this lie goes unnoticed.\nThe scene's file reference list, collection, path remapping and portability checks do not depend\non context and moved to `deps` / `portability` in houdini_mcp_base. The contents of image textures\nare handled by `texture_info` in houdini_mcp_mat.\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "export": {
+      "source": "내보내기 툴 — 쓰고 나서 **반드시 다시 읽어 검증한다.**",
+      "source_hash": "5eafe9db28ca",
+      "en": "Export tools — **always read back and verified after writing.**"
+    },
+    "usd": {
+      "source": "USD 내보내기 - LOP 스테이지를 pxr 로 직접 쓰고 다시 열어 대조한다.",
+      "source_hash": "e526e71aea17",
+      "en": "USD export - writes LOP stages directly with pxr and reopens them to compare."
+    },
+    "interchange": {
+      "source": "Alembic·FBX 내보내기 - DCC 교환 포맷. 둘 다 ROP 으로 쓴다.",
+      "source_hash": "41c51ab1353e",
+      "en": "Alembic and FBX export - DCC interchange formats. Both are written through ROPs."
+    },
+    "load": {
+      "source": "들이는 툴 — 파일을 씬으로, 그리고 들이기 전에 파일을 열어 본다.",
+      "source_hash": "4dbcddc0804c",
+      "en": "Import tools — files into the scene, and a look inside a file before importing it."
+    }
+  },
+  "tools": {
+    "write_geometry": {
+      "source": "SOP 지오메트리를 네이티브 포맷으로 쓰고, 다시 읽어 맞는지 확인한다.\npath: 내보낼 SOP 노드 경로.\nfile_path: 저장할 경로. $HIP 같은 Houdini 변수를 써도 된다. 쓸 수 있는 확장자: .bgeo.sc(권장) / .bgeo / .geo / .obj / .ply / .stl / .vdb\noverwrite: 이미 있는 파일을 덮어쓸 때 True.\nframe_range: [start, end] 또는 [start, end, step]. 주면 프레임마다 쿡해서 쓴다. 이때 file_path 에 $F4 같은 프레임 토큰이 있어야 한다.\nverify: False 면 다시 읽지 않는다. 아주 큰 캐시에만 쓴다.",
+      "source_hash": "0af05ac7a889",
+      "summary": "Writes SOP geometry in a native format and reads it back to confirm it matches.",
+      "args": {
+        "path": "SOP node path to export.",
+        "file_path": "Path to save to. Houdini variables such as $HIP are allowed. Supported extensions: .bgeo.sc (recommended) / .bgeo / .geo / .obj / .ply / .stl / .vdb",
+        "overwrite": "True to overwrite an existing file.",
+        "frame_range": "[start, end] or [start, end, step]. If given, each frame is cooked and written; file_path must then contain a frame token such as $F4.",
+        "verify": "False skips reading back. Use only for very large caches."
+      }
+    },
+    "export_formats": {
+      "source": "어떤 포맷을 어느 툴로 써야 하는지, 이 설치에서 무엇이 되는지 알려 준다.",
+      "source_hash": "04cbcd972c0e",
+      "summary": "Tells which tool to use for which format and what works on this installation.",
+      "args": {}
+    },
+    "export_usd": {
+      "source": "SOP 이나 LOP 을 USD 로 내보내고, pxr 로 다시 열어 확인한다.\npath: 내보낼 SOP 또는 LOP 노드 경로.\nfile_path: 저장할 경로. .usd / .usda(텍스트) / .usdc(바이너리) / .usdz\noverwrite: 이미 있는 파일을 덮어쓸 때 True.\nflatten: True 면 컴포지션을 평탄화해서 한 파일로 쓴다(참조·서브레이어가 풀린 자립 파일). False 면 루트 레이어만 쓴다 — 참조가 상대 경로로 남으므로 옮기면 깨질 수 있다.\nset_metadata: True(기본)면 쓴 뒤 upAxis 와 defaultPrim 을 채운다. pxr 의 Export 는 이 둘을 저자하지 않아서, 그냥 두면 다른 DCC 가 읽을 때 방향과 진입 프림을 모른다.\nrun_usdchecker: True 면 $HFS/bin/usdchecker 로 규격 검사까지 돌린다.",
+      "source_hash": "907f09f04848",
+      "summary": "Exports a SOP or LOP to USD and reopens it with pxr to confirm.",
+      "args": {
+        "path": "SOP or LOP node path to export.",
+        "file_path": "Path to save to. .usd / .usda (text) / .usdc (binary) / .usdz",
+        "overwrite": "True to overwrite an existing file.",
+        "flatten": "True flattens the composition into one self-contained file (references and sublayers resolved). False writes only the root layer — references stay relative and may break if the file is moved.",
+        "set_metadata": "True (default) fills upAxis and defaultPrim after writing. pxr's Export does not author these, so without them other DCCs do not know the orientation or the entry prim.",
+        "run_usdchecker": "True also runs the compliance check with $HFS/bin/usdchecker."
+      }
+    },
+    "export_alembic": {
+      "source": "SOP 을 Alembic 으로 내보내고, abcinfo 로 다시 열어 확인한다.\npath: 내보낼 SOP 노드 경로.\nfile_path: 저장할 .abc 경로.\noverwrite: 이미 있는 파일을 덮어쓸 때 True.\nframe_range: [start, end] 또는 [start, end, step]. 생략하면 현재 프레임만. Alembic 한 파일 안에 프레임들이 시간 샘플로 들어간다.",
+      "source_hash": "49dca35f8c3d",
+      "summary": "Exports a SOP to Alembic and reopens it with abcinfo to confirm.",
+      "args": {
+        "path": "SOP node path to export.",
+        "file_path": ".abc path to save to.",
+        "overwrite": "True to overwrite an existing file.",
+        "frame_range": "[start, end] or [start, end, step]. Current frame only if omitted. The frames are stored as time samples inside one Alembic file."
+      }
+    },
+    "export_fbx": {
+      "source": "OBJ 서브트리나 SOP 을 FBX 로 내보내고, 헤더를 확인한다.\npath: 내보낼 노드 경로. OBJ 노드(서브트리 통째로) 또는 SOP.\nfile_path: 저장할 .fbx 경로.\noverwrite: 이미 있는 파일을 덮어쓸 때 True.\nframe_range: [start, end] 또는 [start, end, step]. 생략하면 현재 프레임만.\nascii_format: True 면 텍스트 FBX 로 쓴다. 디버깅용이고 파일이 커진다.",
+      "source_hash": "1031d8f1c554",
+      "summary": "Exports an OBJ subtree or a SOP to FBX and checks the header.",
+      "args": {
+        "path": "Node path to export. An OBJ node (whole subtree) or a SOP.",
+        "file_path": ".fbx path to save to.",
+        "overwrite": "True to overwrite an existing file.",
+        "frame_range": "[start, end] or [start, end, step]. Current frame only if omitted.",
+        "ascii_format": "True writes text FBX. Meant for debugging; the file gets larger."
+      }
+    },
+    "probe_file": {
+      "source": "파일을 **실제로 열어** 안에 무엇이 들었는지 돌려준다.\nfile_path: 열어 볼 파일 경로. $HIP 같은 Houdini 변수를 써도 된다.\ndetail: True 면 더 깊게 본다(USD 는 해석된 레이어 목록, Alembic 은 어트리뷰트와 페이스셋까지). 느려진다.",
+      "source_hash": "d887284953f6",
+      "summary": "**Actually opens** a file and returns what is inside.",
+      "args": {
+        "file_path": "File path to open. Houdini variables such as $HIP are allowed.",
+        "detail": "True looks deeper (resolved layer list for USD, attributes and face sets for Alembic). Slower."
+      }
+    },
+    "import_geometry": {
+      "source": "지오메트리 파일을 읽는 SOP 을 만들고, 쿡해서 무엇이 들어왔는지 돌려준다.\nparent: 노드를 만들 네트워크 경로. 예: /obj 또는 /obj/castle\nfile_path: 읽을 파일 경로. $HIP 같은 Houdini 변수를 써도 된다.\ncomment: 이 노드가 왜 있는지 영어로. 씬을 여는 사람이 읽는다.\nname: 노드 이름. 생략하면 Houdini 가 짓는다. 역할이 드러나게 지으세요.",
+      "source_hash": "d267074a1514",
+      "summary": "Creates a SOP that reads a geometry file, cooks it and returns what came in.",
+      "args": {
+        "parent": "Network path to create the node in. Example: /obj or /obj/castle",
+        "file_path": "File path to read. Houdini variables such as $HIP are allowed.",
+        "comment": "Why this node exists, in English. Read by whoever opens the scene.",
+        "name": "Node name. Houdini picks one if omitted. Choose a name that describes the role."
+      }
+    },
+    "import_scene": {
+      "source": "다른 .hip 의 노드를 현재 씬에 합친다. 무엇이 들어왔는지 세어 준다.\nfile_path: 합칠 .hip / .hipnc / .hiplc 경로.\nnode_pattern: 이 패턴에 맞는 노드만 들인다. 기본은 전부.\noverwrite_on_conflict: 같은 경로의 노드를 덮어쓴다. 되돌리기 어려우므로 명시적으로 요구한다.",
+      "source_hash": "e86da943a374",
+      "summary": "Merges nodes from another .hip into the current scene and counts what came in.",
+      "args": {
+        "file_path": "Path of the .hip / .hipnc / .hiplc to merge.",
+        "node_pattern": "Import only nodes matching this pattern. Everything by default.",
+        "overwrite_on_conflict": "Overwrite nodes at the same path. Hard to undo, so it must be requested explicitly."
+      }
+    }
+  }
+}

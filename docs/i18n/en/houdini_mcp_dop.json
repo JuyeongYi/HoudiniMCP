@@ -1,0 +1,235 @@
+{
+  "pack": "houdini_mcp_dop",
+  "overview": {
+    "text": {
+      "source": "DOP 공통 툴 팩 — 시뮬레이션을 짓고, 돌려 보고, 무슨 일이 일어났는지 안다.\n\n솔버별 전문(파이로 소스 플러밍, FLIP 화이트워터, RBD 프랙처)은 하위 팩으로\n뺀다. 여기는 솔버를 가리지 않는 것만 담는다.\n\n    setup    dopnet 생성, 오브젝트 편입, 힘 추가 — 만든 것을 전부 설명한다\n    objects  시뮬 오브젝트·릴레이션십·솔버 구성 조회\n    fields   볼륨 필드 목록과 통계 — 복셀을 통째로 넘기지 않는다\n    run      프레임 진행, 저해상도 시험 주행, 리셋, 메모리\n    cache    .sim 캐시 쓰기와 상태\n    check    돌리기 전에 무엇이 빠졌는지 찾는다\n\n툴이 없는 헬퍼는 둘로 나눠 뒀다. `_common` 은 씬을 만지는 쪽(레시피 표, 노드\n해석과 조립, dopnet 구조), `_state` 는 쿡된 결과를 읽는 쪽(오브젝트 요약, 필드\n통계, 프레임 진행과 발산 감지)이다.\n\n이 팩의 셋업 툴은 블랙박스 매크로가 아니다. 만든 노드마다 역할과 건 파라미터,\n그리고 다음에 무엇을 하면 되는지를 함께 돌려준다. 모델이 이어서 손볼 수\n있어야 하기 때문이다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "d7a81bafd44f",
+      "en": "Common DOP tool pack — build simulations, run them, and know what happened.\n\nSolver-specific work (pyro source plumbing, FLIP whitewater, RBD fracturing) goes into sub-packs.\nThis pack holds only what is solver-independent.\n\n    setup    dopnet creation, adding objects, adding forces — explains everything it builds\n    objects  queries simulation objects, relationships and solver setup\n    fields   volume field lists and statistics — voxels are never sent wholesale\n    run      frame stepping, low-resolution test runs, reset, memory\n    cache    writing .sim caches and their status\n    check    finds what is missing before running\n\nTool-less helpers are split in two. `_common` touches the scene (recipe tables, node resolution\nand assembly, dopnet structure); `_state` reads cooked results (object summaries, field\nstatistics, frame stepping and divergence detection).\n\nThe setup tools here are not black-box macros. For every node they build, they return its role,\nthe parameters set, and what to do next, because the model has to be able to keep working on it.\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "setup": {
+      "source": "시뮬레이션 네트워크를 짓는 툴.",
+      "source_hash": "a9633e187676",
+      "en": "Tools that build simulation networks."
+    },
+    "objects": {
+      "source": "시뮬레이션 안을 들여다보는 툴 — 오브젝트, 릴레이션십, 솔버 구성.",
+      "source_hash": "12de4c572815",
+      "en": "Tools that look inside a simulation — objects, relationships, solver setup."
+    },
+    "fields": {
+      "source": "볼륨 필드를 통계로 읽는 툴.",
+      "source_hash": "5a8de4a206ec",
+      "en": "Tools that read volume fields as statistics."
+    },
+    "run": {
+      "source": "시뮬을 실제로 돌려 보고 무슨 일이 일어났는지 돌려주는 툴.",
+      "source_hash": "a50351cf18a4",
+      "en": "Tools that actually run a simulation and return what happened."
+    },
+    "cache": {
+      "source": "시뮬 결과를 .sim 파일로 굽고 상태를 읽는 툴.",
+      "source_hash": "843dce98f6c0",
+      "en": "Tools that bake simulation results to .sim files and read their status."
+    },
+    "check": {
+      "source": "돌리기 전에 무엇이 빠졌는지 찾는 툴.",
+      "source_hash": "a123f8b7a658",
+      "en": "Tool that finds what is missing before running."
+    }
+  },
+  "tools": {
+    "create_dopnet": {
+      "source": "빈 DOP 네트워크를 만들고 중력·머지·출력을 이어 돌려준다.\nparent: dopnet 을 담을 네트워크. 보통 /obj\nname: dopnet 이름. 무엇을 시뮬하는지 드러나게. 예: castle_collapse_sim\ncomment: 이 시뮬이 무엇을 위한 것인지. 필수. 씬에 저장되므로 영어로.\ngravity: 중력 가속도 Y 성분. 0 이면 중력 노드를 만들지 않는다.\nstart_frame: 시뮬 시작 프레임. 생략하면 dopnet 기본값(1).\nsubsteps: 프레임당 서브스텝. 생략하면 1. 관통이 생기면 올린다.\ncache_size_mb: 시뮬 캐시 상한(MB). 생략하면 기본값(5000).",
+      "source_hash": "9430d6e328b8",
+      "summary": "Creates an empty DOP network wired with gravity, merge and output, and returns it.",
+      "args": {
+        "parent": "Network to hold the dopnet. Usually /obj",
+        "name": "Dopnet name, showing what is simulated. Example: castle_collapse_sim",
+        "comment": "What this simulation is for. Required. Stored in the scene, so write it in English.",
+        "gravity": "Y component of gravitational acceleration. 0 creates no gravity node.",
+        "start_frame": "Simulation start frame. Dopnet default (1) if omitted.",
+        "substeps": "Substeps per frame. 1 if omitted. Raise it if objects pass through each other.",
+        "cache_size_mb": "Simulation cache limit (MB). Default (5000) if omitted."
+      }
+    },
+    "add_dop_object": {
+      "source": "/obj 의 지오메트리를 시뮬에 편입시키고, 만든 것을 전부 설명해 돌려준다.\ndopnet: DOP 네트워크 경로. 예: /obj/castle_collapse_sim\nsource_object: 시뮬에 넣을 /obj 아래 geo 노드. 예: /obj/falling_box\nobject_type: DOP 오브젝트 타입. rbdobject(강체), staticobject(충돌체), rbdpackedobject(패킹된 조각들), clothobject::2.0(천), wireobject(와이어), sandobject(모래), smokeobject(스모크 컨테이너), popobject(파티클), vellumobject(벨럼) 등.\ncomment: 이 오브젝트가 시뮬에서 무슨 역할인지. 필수. 영어로. 예: \"Tower blocks, active rigid bodies\"\nname: DOP 노드 이름. 역할이 드러나게. 예: tower_blocks_rbd\nsolver_type: 솔버를 직접 지정할 때만. 생략하면 표에서 고른다. 예: bulletrbdsolver (rigidbodysolver 대신 불릿을 쓰고 싶을 때)\nparms: DOP 오브젝트 노드에 걸 파라미터. 예: {\"divsize\": 0.05}\ncreate_import: 원본 오브젝트에 DOP Import SOP 을 만들지. 정적 충돌체는 시뮬 결과를 되읽을 필요가 없으므로 자동으로 꺼진다.",
+      "source_hash": "34f6adcff113",
+      "summary": "Brings /obj geometry into the simulation and returns an explanation of everything it built.",
+      "args": {
+        "dopnet": "DOP network path. Example: /obj/castle_collapse_sim",
+        "source_object": "geo node under /obj to put in the simulation. Example: /obj/falling_box",
+        "object_type": "DOP object type: rbdobject (rigid body), staticobject (collider), rbdpackedobject (packed pieces), clothobject::2.0 (cloth), wireobject (wire), sandobject (sand), smokeobject (smoke container), popobject (particles), vellumobject (Vellum) and so on.",
+        "comment": "The role of this object in the simulation. Required. In English. Example: \"Tower blocks, active rigid bodies\"",
+        "name": "DOP node name, showing its role. Example: tower_blocks_rbd",
+        "solver_type": "Only to choose the solver explicitly. Picked from the table if omitted. Example: bulletrbdsolver (to use Bullet instead of rigidbodysolver)",
+        "parms": "Parameters for the DOP object node. Example: {\"divsize\": 0.05}",
+        "create_import": "Whether to create a DOP Import SOP in the source object. Turned off automatically for static colliders, which never need to read results back."
+      }
+    },
+    "add_dop_force": {
+      "source": "시뮬 전체에 걸리는 힘을 체인 끝에 끼워 넣고 무엇이 바뀌었는지 돌려준다.\ndopnet: DOP 네트워크 경로.\nforce_type: DOP 힘 노드 타입. gravity, windforce, drag, fan, pointforce, vortexforce, magnetforce, uniformforce 등.\ncomment: 이 힘이 무엇을 하는지. 필수. 영어로. 예: \"Side wind pushing the smoke east\"\nname: 노드 이름. 예: side_wind\nparms: 힘 노드 파라미터. 벡터는 성분 이름이 따로다 — windforce 는 velx/vely/velz, uniformforce 는 forcex/forcey/forcez. 예: {\"velx\": 5.0}. 이름이 틀리면 무엇이 있는지 알려 준다.\naffect_objects: 이 힘을 받을 오브젝트 이름 패턴. 생략하면 전부. 예: \"tower_*\"",
+      "source_hash": "b27135732848",
+      "summary": "Inserts a force acting on the whole simulation at the end of the chain and returns what changed.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "force_type": "DOP force node type: gravity, windforce, drag, fan, pointforce, vortexforce, magnetforce, uniformforce and so on.",
+        "comment": "What this force does. Required. In English. Example: \"Side wind pushing the smoke east\"",
+        "name": "Node name. Example: side_wind",
+        "parms": "Force node parameters. Vectors use separate component names — velx/vely/velz for windforce, forcex/forcey/forcez for uniformforce. Example: {\"velx\": 5.0}. A wrong name gets a list of what exists.",
+        "affect_objects": "Name pattern of the objects this force acts on. All if omitted. Example: \"tower_*\""
+      }
+    },
+    "list_dop_objects": {
+      "source": "쿡된 시뮬 안의 오브젝트들과 각각의 상태.\ndopnet: DOP 네트워크 경로. 예: /obj/castle_collapse_sim\npattern: 오브젝트 이름 패턴. 예: \"tower_*\". 기본은 전부.",
+      "source_hash": "1309a4871f12",
+      "summary": "Objects in the cooked simulation and the state of each.",
+      "args": {
+        "dopnet": "DOP network path. Example: /obj/castle_collapse_sim",
+        "pattern": "Object name pattern. Example: \"tower_*\". All by default."
+      }
+    },
+    "dop_object_info": {
+      "source": "시뮬 오브젝트 하나를 깊게. 레코드, 서브데이터, 만든 노드, 솔버.\ndopnet: DOP 네트워크 경로.\nname: 오브젝트 이름. list_dop_objects 로 확인한 이름.",
+      "source_hash": "c1245cb0827c",
+      "summary": "One simulation object in depth: records, subdata, creating node, solver.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "name": "Object name, as shown by list_dop_objects."
+      }
+    },
+    "dop_relationships": {
+      "source": "시뮬의 릴레이션십 — 무엇이 무엇에 영향을 주고 어떤 컨스트레인트가 있는지.\ndopnet: DOP 네트워크 경로.",
+      "source_hash": "5cc2244f5180",
+      "summary": "Simulation relationships — what affects what, and which constraints exist.",
+      "args": {
+        "dopnet": "DOP network path."
+      }
+    },
+    "simulation_info": {
+      "source": "시뮬 구성 전체 — 솔버, 타임스텝, 서브스텝, 캐시 설정, 현재 상태.\ndopnet: DOP 네트워크 경로.",
+      "source_hash": "a65a8a40bfd2",
+      "summary": "The whole simulation setup — solvers, timestep, substeps, cache settings, current state.",
+      "args": {
+        "dopnet": "DOP network path."
+      }
+    },
+    "dop_node_info": {
+      "source": "dopnet 안의 DOP 노드 하나가 실제로 시뮬에 참여하는지와 그 연결.\npath: DOP 노드 경로. 예: /obj/castle_collapse_sim/rbd_solver",
+      "source_hash": "416fd0d6297e",
+      "summary": "Whether one DOP node inside a dopnet actually takes part in the simulation, and its connections.",
+      "args": {
+        "path": "DOP node path. Example: /obj/castle_collapse_sim/rbd_solver"
+      }
+    },
+    "list_dop_fields": {
+      "source": "시뮬 오브젝트가 가진 볼륨 필드 목록 — 종류, 해상도, 복셀 수, 메모리.\ndopnet: DOP 네트워크 경로.\nname: 오브젝트 이름. 예: smoke_container\ninclude_temp: 솔버 내부 임시 필드(__tempfield_*)도 포함할지.",
+      "source_hash": "986b9869c6bc",
+      "summary": "Volume fields of a simulation object — kind, resolution, voxel count, memory.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "name": "Object name. Example: smoke_container",
+        "include_temp": "Whether to include solver-internal temporary fields (__tempfield_*)."
+      }
+    },
+    "field_stats": {
+      "source": "필드 하나의 값 통계. 복셀을 통째로 넘기지 않는다.\ndopnet: DOP 네트워크 경로.\nname: 오브젝트 이름. 예: smoke_container\nfield: 필드 이름. 예: density, temperature, vel, pressure\ndeep: 복셀을 다 읽어 히스토그램과 NaN 개수까지 낼지.\nbins: deep=True 일 때 히스토그램 구간 수.",
+      "source_hash": "e3674ae5c7ea",
+      "summary": "Value statistics of one field. Voxels are never sent wholesale.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "name": "Object name. Example: smoke_container",
+        "field": "Field name. Examples: density, temperature, vel, pressure",
+        "deep": "Whether to read every voxel for a histogram and NaN count.",
+        "bins": "Number of histogram bins when deep=True."
+      }
+    },
+    "field_data_types": {
+      "source": "오브젝트의 서브데이터를 종류별로 갈라 준다 — 필드, 솔버, 힘, 그 밖.\ndopnet: DOP 네트워크 경로.\nname: 오브젝트 이름.",
+      "source_hash": "8b33b45123de",
+      "summary": "Splits an object's subdata by kind — fields, solvers, forces, other.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "name": "Object name."
+      }
+    },
+    "step_simulation": {
+      "source": "현재 프레임에서 N 프레임 진행시키고 프레임별 상태를 돌려준다.\ndopnet: DOP 네트워크 경로.\nframes: 진행할 프레임 수. 1이면 다음 한 프레임만.\ndeep_fields: 필드를 복셀까지 읽어 히스토그램과 NaN 개수를 낼지. 필드가 크면 느려진다. 기본은 싼 min/max/mean 만.\nspeed_limit: 점 속도가 이 값을 넘으면 발산으로 표시한다.",
+      "source_hash": "480b1456c868",
+      "summary": "Advances N frames from the current frame and returns the state of each frame.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "frames": "Number of frames to advance. 1 means just the next frame.",
+        "deep_fields": "Whether to read fields down to voxels for histograms and NaN counts. Slow for large fields. By default only cheap min/max/mean.",
+        "speed_limit": "Point speeds above this are flagged as divergence."
+      }
+    },
+    "test_simulation": {
+      "source": "저해상도로 N 프레임 돌려 보고 프레임별 리포트를 돌려준다.\ndopnet: DOP 네트워크 경로.\nstart: 시작 프레임.\nend: 끝 프레임. start 와 가까울수록 빨리 끝난다.\nresolution_factor: 복셀/파티클 간격을 몇 배로 키울지. 1이면 원래 해상도 그대로 돈다.\nsubsteps: 시험 주행 동안 쓸 서브스텝. 생략하면 그대로.\ndeep_fields: 필드를 복셀까지 읽을지. 저해상도라 대개 감당된다.\nspeed_limit: 점 속도가 이 값을 넘으면 발산으로 표시한다.",
+      "source_hash": "546b6bb514ea",
+      "summary": "Runs N frames at low resolution and returns a per-frame report.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "start": "Start frame.",
+        "end": "End frame. The closer to start, the sooner it finishes.",
+        "resolution_factor": "How many times to enlarge the voxel/particle spacing. 1 runs at the original resolution.",
+        "substeps": "Substeps to use during the test run. Unchanged if omitted.",
+        "deep_fields": "Whether to read fields down to voxels. Usually affordable at low resolution.",
+        "speed_limit": "Point speeds above this are flagged as divergence."
+      }
+    },
+    "reset_simulation": {
+      "source": "시뮬 캐시를 버리고 처음 상태로 돌린다. 버린 메모리를 돌려준다.\ndopnet: DOP 네트워크 경로.\ncook_first_frame: 리셋한 뒤 시작 프레임을 한 번 쿡할지. 켜면 리셋 직후의 초기 상태를 바로 확인할 수 있다.",
+      "source_hash": "9030bc16b436",
+      "summary": "Discards the simulation cache and returns to the initial state. Returns the memory freed.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "cook_first_frame": "Whether to cook the start frame once after resetting, so the initial state can be checked right away."
+      }
+    },
+    "sim_memory": {
+      "source": "시뮬 메모리를 오브젝트별·서브데이터별로 갈라 준다.\ndopnet: DOP 네트워크 경로.\ntop: 가장 큰 서브데이터를 몇 개까지 보여줄지.",
+      "source_hash": "b9d2c6d8cb40",
+      "summary": "Splits simulation memory by object and by subdata.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "top": "How many of the largest subdata entries to show."
+      }
+    },
+    "write_sim_cache": {
+      "source": "시뮬을 프레임 범위만큼 돌리면서 프레임마다 .sim 파일로 굽는다.\ndopnet: DOP 네트워크 경로.\ndirectory: .sim 파일을 담을 디렉토리. 없으면 만든다. $HIP 같은 변수를 그대로 쓴다 - File DOP 에 원문으로 걸려 씬을 옮겨도 풀린다.\nstart: 시작 프레임.\nend: 끝 프레임.\ncomment: File DOP 에 달 코멘트. 필수. 씬에 저장되므로 영어로. 예: \"Bake tower collapse, frames 1-120\"\nfilename: 파일 이름 패턴. 생략하면 \"<dopnet 이름>.$SF.sim\". 프레임 번호 자리에 $SF(시뮬 프레임)를 넣어야 한다.\ncompress: .sim 파일을 압축할지. 끄면 커지지만 읽기가 조금 빠르다.\ndeep_fields: 프레임 리포트에 필드 히스토그램까지 넣을지.",
+      "source_hash": "388c125794ac",
+      "summary": "Runs the simulation over a frame range and bakes each frame to a .sim file.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "directory": "Directory for the .sim files. Created if missing. Variables such as $HIP are kept as is - the raw string goes into the File DOP, so it still resolves if the scene moves.",
+        "start": "Start frame.",
+        "end": "End frame.",
+        "comment": "Comment for the File DOP. Required. Stored in the scene, so write it in English. Example: \"Bake tower collapse, frames 1-120\"",
+        "filename": "File name pattern. Defaults to \"<dopnet name>.$SF.sim\". Must contain $SF (simulation frame) for the frame number.",
+        "compress": "Whether to compress .sim files. Uncompressed files are larger but read slightly faster.",
+        "deep_fields": "Whether to include field histograms in the frame report."
+      }
+    },
+    "sim_cache_status": {
+      "source": "이 시뮬의 캐시 상태 — 메모리 캐시와 디스크의 .sim 파일 양쪽.\ndopnet: DOP 네트워크 경로.\nstart: 확인할 시작 프레임. 생략하면 플레이바 시작.\nend: 확인할 끝 프레임. 생략하면 플레이바 끝.",
+      "source_hash": "471e26e70a90",
+      "summary": "Cache status of this simulation — both the memory cache and the .sim files on disk.",
+      "args": {
+        "dopnet": "DOP network path.",
+        "start": "Start frame to check. Defaults to the playbar start.",
+        "end": "End frame to check. Defaults to the playbar end."
+      }
+    },
+    "validate_simulation": {
+      "source": "돌리기 전에 시뮬 셋업을 점검하고, 무엇이 빠졌고 어떻게 고치는지 돌려준다.\ndopnet: DOP 네트워크 경로.",
+      "source_hash": "3249a235c550",
+      "summary": "Checks a simulation setup before running and returns what is missing and how to fix it.",
+      "args": {
+        "dopnet": "DOP network path."
+      }
+    }
+  }
+}

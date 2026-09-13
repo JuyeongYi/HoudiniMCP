@@ -160,25 +160,27 @@ hython -c "from houdini_mcp import get_registry; print(len(get_registry()))"
 
 우선순위는 "우리가 실제로 막혔던 순서"다. 성을 만들면서 부족했던 것이 위로 온다.
 
-| 순위 | 팩 | 문서 | 툴 수(초안) | 핵심 라이브러리 |
-|---|---|---|---|---|
-| 1 | `houdini_mcp_sop` | [sop.md](sop.md) | ~30 | `numpy`, `soptoolutils` |
-| 2 | `houdini_mcp_vex` | [vex.md](vex.md) | ~8 | `vcc` 컴파일러 |
-| 3 | `houdini_mcp_mat` | [mat.md](mat.md) | ~20 | `MaterialX`, `UsdShade` |
-| 4 | `houdini_mcp_lop` | [lop.md](lop.md) | ~22 | `pxr`, `husd` |
-| 5 | `houdini_mcp_render` | [render.md](render.md) | ~18 | `husk`, `OpenImageIO` |
-| 6 | `houdini_mcp_dop` | [dop.md](dop.md) | ~16 | `doptoolutils` |
-| 7 | `houdini_mcp_hda` | [hda.md](hda.md) | ~16 | `hou.HDADefinition`, `hotl` |
-| 8 | `houdini_mcp_io` | [io.md](io.md) | ~12 | `pxr`, `hou.fileReferences` |
-| 9 | `houdini_mcp_chop` | [chop.md](chop.md) | ~14 | `numpy`, `hou.Track` |
-| 10 | `houdini_mcp_rig` | [rig.md](rig.md) | ~18 | `apex` |
-| 11 | `houdini_mcp_top` | [top.md](top.md) | ~14 | `pdg` |
-| 12 | `houdini_mcp_cop` | 팩 docstring | 2 (시작) | `hou.ImageLayer`, `OpenImageIO` |
-| 13 | `houdini_mcp_dop_rbd` | [dop.md](dop.md) 하위 팩 절 | 2 (시작) | `numpy`, `geometryAtFrame` |
+현재 팩마다의 툴 목록과 개수는 각 팩의 `README.md` 를 본다(코드에서 생성).
 
-`houdini_mcp_cop` 은 설계 문서 없이 필요가 먼저 드러나 만들었다(2026-09-13). 성 씬의
-텍스처를 COP 으로 만들고도 결과를 볼 수 없어 품질 문제를 렌더에서야 알았다.
-지금은 `cop_preview`(composite view 대신 그림), `cop_layer_info`(레이어 수치)뿐이다.
+| 순위 | 팩 | 문서 | 핵심 라이브러리 |
+|---|---|---|---|
+| 1 | `houdini_mcp_sop` | [sop.md](sop.md) | `numpy`, `soptoolutils` |
+| 2 | `houdini_mcp_vex` | [vex.md](vex.md) | `vcc` 컴파일러 |
+| 3 | `houdini_mcp_mat` | [mat.md](mat.md) | `MaterialX`, `UsdShade` |
+| 4 | `houdini_mcp_lop` | [lop.md](lop.md) | `pxr`, `husd` |
+| 5 | `houdini_mcp_render` | [render.md](render.md) | `husk`, `OpenImageIO` |
+| 6 | `houdini_mcp_dop` | [dop.md](dop.md) | `doptoolutils` |
+| 7 | `houdini_mcp_hda` | [hda.md](hda.md) | `hou.HDADefinition`, `hotl` |
+| 8 | `houdini_mcp_io` | [io.md](io.md) | `pxr`, `hou.fileReferences` |
+| 9 | `houdini_mcp_chop` | [chop.md](chop.md) | `numpy`, `hou.Track` |
+| 10 | `houdini_mcp_rig` | [rig.md](rig.md) | `apex` |
+| 11 | `houdini_mcp_top` | [top.md](top.md) | `pdg` |
+| 12 | `houdini_mcp_cop` | [cop.md](cop.md) | `hou.ImageLayer`, `numpy`, `OpenImageIO` |
+| 13 | `houdini_mcp_dop_rbd` | [dop.md](dop.md) 하위 팩 절 | `numpy`, `geometryAtFrame` |
+
+`houdini_mcp_cop` 은 설계 문서보다 필요가 먼저 드러나 미리보기부터 만들었다(2026-09-13).
+성 씬의 텍스처를 COP 으로 만들고도 결과를 볼 수 없어 품질 문제를 렌더에서야 알았다.
+나머지 범위는 [cop.md](cop.md) 에 설계했다.
 
 `houdini_mcp_base` 에 남은 결핍 86개는 팩이 아니라 base 확장이다.
 [base-gaps.md](base-gaps.md) 를 본다.

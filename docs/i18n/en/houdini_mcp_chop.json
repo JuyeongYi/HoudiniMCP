@@ -1,0 +1,244 @@
+{
+  "pack": "houdini_mcp_chop",
+  "overview": {
+    "text": {
+      "source": "CHOP 전문 툴 팩 — 채널을 값이 아니라 **분석 결과**로 다룬다.\n\n파라미터 하나에 키를 찍고 읽고 지우는 것은 `houdini_mcp_base` 의 anim 모듈에\n있다. 프레임 범위는 base 의 `set_frame_range` 다. 여기는 채널을 시계열\n데이터로 보고 그 성질을 판정하는 것을 담는다.\n\n    build      CHOP 네트워크·노드 생성, 필터 적용 (전후 통계 비교)\n    data       채널 목록·통계·샘플 — numpy 벌크 경로\n    check      루프 가능 여부와 튐을 실제 값으로 판정\n    transfer   CHOP <-> 파라미터 (키로 굽기, 파라미터 끌어오기, 익스포트 플래그)\n    files      Houdini 채널 파일 입출력 (.clip/.bclip, .chan/.bchan)\n    bake       파라미터의 식을 키프레임으로 굽고 값이 같은지 검증\n    audio      오디오 파일을 읽어 파형을 분석\n\n샘플을 하나씩 파지 않는다. `hou.Track.allSamples()` 가 범위를 통째로 주고,\nnumpy 가 그것을 압축한다. 실측으로 240샘플에 360배 차이가 난다\n(docs/design/packs/chop.md 참고).\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "7ae2a5337ef1",
+      "en": "CHOP tool pack — treats channels as **analysis results** rather than lists of values.\n\nSetting, reading and deleting keys on a single parameter lives in the anim module of\n`houdini_mcp_base`, and the frame range is base's `set_frame_range`. This pack treats channels\nas time series and judges their properties.\n\n    build      CHOP network and node creation, applying filters (before/after statistics)\n    data       channel lists, statistics and samples — numpy bulk path\n    check      decides from actual values whether a channel loops and where it spikes\n    transfer   CHOP <-> parameters (bake to keys, pull parameters in, export flag)\n    files      Houdini channel file I/O (.clip/.bclip, .chan/.bchan)\n    bake       bakes parameter expressions to keyframes and verifies the values match\n    audio      reads audio files and analyses the waveform\n\nSamples are not read one by one. `hou.Track.allSamples()` returns the whole range at once and\nnumpy condenses it. Measured, the difference is 360x for 240 samples (see\ndocs/design/packs/chop.md).\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "build": {
+      "source": "CHOP 네트워크와 노드를 만들고 필터를 건다.",
+      "source_hash": "743f17fb7325",
+      "en": "Create CHOP networks and nodes and apply filters."
+    },
+    "data": {
+      "source": "채널을 읽는다 — 값 목록이 아니라 분석 결과로.",
+      "source_hash": "13612103fa87",
+      "en": "Read channels — as analysis results, not lists of values."
+    },
+    "check": {
+      "source": "채널을 **실제 값으로** 판정한다.",
+      "source_hash": "95252b0b902b",
+      "en": "Judge channels **from their actual values**."
+    },
+    "transfer": {
+      "source": "CHOP 과 파라미터 사이를 오간다.",
+      "source_hash": "e7f76d98b5e5",
+      "en": "Move between CHOPs and parameters."
+    },
+    "files": {
+      "source": "채널을 Houdini 포맷 파일로 주고받는다. 자체 JSON 포맷을 만들지 않는다.",
+      "source_hash": "2a453a74070b",
+      "en": "Exchange channels as Houdini-format files. No custom JSON format is invented."
+    },
+    "bake": {
+      "source": "파라미터의 식을 키프레임으로 굽고, **구운 값이 원래와 같은지 검증한다.**",
+      "source_hash": "2f848ffa2cf7",
+      "en": "Bake parameter expressions to keyframes and **verify the baked values match the originals.**"
+    },
+    "audio": {
+      "source": "오디오를 읽어 **파형을 분석한다.**",
+      "source_hash": "6ff8042ac2af",
+      "en": "Read audio and **analyse the waveform.**"
+    }
+  },
+  "tools": {
+    "create_chop_network": {
+      "source": "CHOP 네트워크(chopnet)를 만든다.\nparent: 네트워크를 놓을 부모 경로. 예: /obj\ncomment: 이 네트워크가 무엇을 위한 것인지. 영어로 적는다.\nname: 노드 이름. 생략하면 Houdini 가 정한다.",
+      "source_hash": "f74570c69bde",
+      "summary": "Creates a CHOP network (chopnet).",
+      "args": {
+        "parent": "Parent path to place the network in. Example: /obj",
+        "comment": "What this network is for. Write it in English.",
+        "name": "Node name. Houdini picks one if omitted."
+      }
+    },
+    "create_chop_node": {
+      "source": "CHOP 네트워크 안에 CHOP 을 만들고 쿡해서 채널을 돌려준다.\nparent: CHOP 네트워크 경로. create_chop_network 가 돌려준 것.\nnode_type: CHOP 타입 이름. 예: noise, wave, constant\ncomment: 이 노드가 무엇을 하는지. 영어로 적는다.\nname: 노드 이름. 생략하면 Houdini 가 정한다.\nparms: 걸 파라미터. 예: {\"channelname\": \"shake\", \"amp\": 0.4}\ninputs: 입력으로 이을 CHOP 경로들. 순서대로 0번 입력부터.",
+      "source_hash": "61c9e0867f38",
+      "summary": "Creates a CHOP inside a CHOP network, cooks it and returns its channels.",
+      "args": {
+        "parent": "CHOP network path, as returned by create_chop_network.",
+        "node_type": "CHOP type name. Examples: noise, wave, constant",
+        "comment": "What this node does. Write it in English.",
+        "name": "Node name. Houdini picks one if omitted.",
+        "parms": "Parameters to set. Example: {\"channelname\": \"shake\", \"amp\": 0.4}",
+        "inputs": "CHOP paths to connect as inputs, in order starting from input 0."
+      }
+    },
+    "apply_chop_filter": {
+      "source": "CHOP 뒤에 필터를 달고 **전후 통계를 비교해서** 돌려준다.\npath: 필터를 걸 CHOP 경로.\nfilter: lag, smooth, limit, shift, resample, spring, jiggle 중 하나.\ncomment: 왜 이 필터를 거는지. 영어로 적는다.\nname: 노드 이름. 생략하면 Houdini 가 정한다.\nstrength: 필터의 주 파라미터. 생략하면 노드 기본값.\nparms: 세부 파라미터를 직접 덮어쓴다. 예: {\"min\": 0, \"max\": 1}",
+      "source_hash": "b61060914d07",
+      "summary": "Appends a filter to a CHOP and returns **a before/after comparison of statistics**.",
+      "args": {
+        "path": "CHOP path to filter.",
+        "filter": "One of lag, smooth, limit, shift, resample, spring, jiggle.",
+        "comment": "Why this filter is applied. Write it in English.",
+        "name": "Node name. Houdini picks one if omitted.",
+        "strength": "The filter's main parameter. Node default if omitted.",
+        "parms": "Overrides detailed parameters directly. Example: {\"min\": 0, \"max\": 1}"
+      }
+    },
+    "list_channels": {
+      "source": "CHOP 의 채널 목록. 이름·샘플 수·값 범위까지 한 줄씩.\npath: CHOP 경로.\noutput_index: 출력이 여러 개인 CHOP 의 출력 번호.",
+      "source_hash": "b9dd484a51bf",
+      "summary": "Channel list of a CHOP, one line each with name, sample count and value range.",
+      "args": {
+        "path": "CHOP path.",
+        "output_index": "Output index for CHOPs with several outputs."
+      }
+    },
+    "channel_stats": {
+      "source": "채널의 전체 분석. 이 팩의 핵심 툴이다.\npath: CHOP 경로.\nchannels: 볼 채널 이름들. 생략하면 전부.\noutput_index: 출력이 여러 개인 CHOP 의 출력 번호.\nspike_threshold: 튐 판정 문턱. 낮출수록 민감해진다. 기본 6.0\nstill_tolerance: 정지로 볼 변화량. 생략하면 값 범위의 0.01%.\nloop_tolerance: 루프 판정 허용치. 값 범위 대비 비율. 기본 0.01\nsparkline_points: 스파크라인 점 수. 기본 48",
+      "source_hash": "11648adb65da",
+      "summary": "Full analysis of channels. The core tool of this pack.",
+      "args": {
+        "path": "CHOP path.",
+        "channels": "Channel names to inspect. All if omitted.",
+        "output_index": "Output index for CHOPs with several outputs.",
+        "spike_threshold": "Spike detection threshold. Lower is more sensitive. Default 6.0",
+        "still_tolerance": "Change treated as standing still. Defaults to 0.01% of the value range.",
+        "loop_tolerance": "Loop detection tolerance as a fraction of the value range. Default 0.01",
+        "sparkline_points": "Number of sparkline points. Default 48"
+      }
+    },
+    "channel_samples": {
+      "source": "채널의 **실제 값**을 본다. 구간을 좁히거나 추려서.\npath: CHOP 경로.\nchannel: 볼 채널 이름. list_channels 가 알려 준다.\nstart_frame: 볼 구간 시작 프레임. 생략하면 채널의 처음.\nend_frame: 볼 구간 끝 프레임(포함). 생략하면 채널의 끝.\nmax_points: 돌려줄 값의 상한. 넘으면 등간격으로 추린다.\noutput_index: 출력이 여러 개인 CHOP 의 출력 번호.",
+      "source_hash": "8c3f7209326e",
+      "summary": "Shows the **actual values** of a channel, over a narrowed or thinned range.",
+      "args": {
+        "path": "CHOP path.",
+        "channel": "Channel name to inspect. list_channels shows the names.",
+        "start_frame": "Start frame of the range. Defaults to the start of the channel.",
+        "end_frame": "End frame of the range (inclusive). Defaults to the end of the channel.",
+        "max_points": "Maximum number of values returned. Beyond it, values are thinned evenly.",
+        "output_index": "Output index for CHOPs with several outputs."
+      }
+    },
+    "check_loop": {
+      "source": "채널이 루프로 이어 붙일 수 있는지 실제 값으로 판정한다.\npath: CHOP 경로.\nchannels: 볼 채널 이름들. 생략하면 전부.\ntolerance: 허용치. 값 범위 대비 비율. 기본 0.01 (1%)\noutput_index: 출력이 여러 개인 CHOP 의 출력 번호.",
+      "source_hash": "fb195d2a12cd",
+      "summary": "Decides from actual values whether channels can be joined into a loop.",
+      "args": {
+        "path": "CHOP path.",
+        "channels": "Channel names to inspect. All if omitted.",
+        "tolerance": "Tolerance as a fraction of the value range. Default 0.01 (1%)",
+        "output_index": "Output index for CHOPs with several outputs."
+      }
+    },
+    "find_spikes": {
+      "source": "채널이 튄 프레임을 찾는다.\npath: CHOP 경로.\nchannels: 볼 채널 이름들. 생략하면 전부.\nthreshold: 문턱. 낮출수록 민감해진다. 기본 6.0\nmax_report: 채널당 돌려줄 튐 개수 상한.\noutput_index: 출력이 여러 개인 CHOP 의 출력 번호.",
+      "source_hash": "920885b4554f",
+      "summary": "Finds the frames where channels spike.",
+      "args": {
+        "path": "CHOP path.",
+        "channels": "Channel names to inspect. All if omitted.",
+        "threshold": "Threshold. Lower is more sensitive. Default 6.0",
+        "max_report": "Maximum number of spikes reported per channel.",
+        "output_index": "Output index for CHOPs with several outputs."
+      }
+    },
+    "export_to_keyframes": {
+      "source": "CHOP 채널을 파라미터 키프레임으로 굽는다. **값이 맞는지 검증해서** 돌려준다.\npath: CHOP 경로.\ntargets: 채널 이름 -> 파라미터 경로. 예: {\"shake\": \"/obj/cam/tx\"}\nchannels: 구울 채널 이름들. 생략하면 전부(또는 targets 의 키).\ninterpolation: constant / linear / cubic / bezier / ease. 기본 linear.\noutput_index: 출력이 여러 개인 CHOP 의 출력 번호.",
+      "source_hash": "028654dfcaae",
+      "summary": "Bakes CHOP channels to parameter keyframes and returns them **after verifying the values match**.",
+      "args": {
+        "path": "CHOP path.",
+        "targets": "Channel name -> parameter path. Example: {\"shake\": \"/obj/cam/tx\"}",
+        "channels": "Channel names to bake. All (or the keys of targets) if omitted.",
+        "interpolation": "constant / linear / cubic / bezier / ease. Default linear.",
+        "output_index": "Output index for CHOPs with several outputs."
+      }
+    },
+    "import_from_parms": {
+      "source": "애니메이션된 파라미터를 Channel CHOP 으로 가져온다.\nparent: CHOP 네트워크 경로. create_chop_network 가 돌려준 것.\nparms: 가져올 파라미터 경로들. 예: [\"/obj/cam/tx\", \"/obj/cam/ty\"]\ncomment: 무엇을 가져오는지. 영어로 적는다.\nname: 노드 이름. 생략하면 Houdini 가 정한다.",
+      "source_hash": "4d06ac473a28",
+      "summary": "Brings animated parameters into a Channel CHOP.",
+      "args": {
+        "parent": "CHOP network path, as returned by create_chop_network.",
+        "parms": "Parameter paths to bring in. Example: [\"/obj/cam/tx\", \"/obj/cam/ty\"]",
+        "comment": "What is being brought in. Write it in English.",
+        "name": "Node name. Houdini picks one if omitted."
+      }
+    },
+    "set_chop_export": {
+      "source": "CHOP 의 익스포트 플래그를 켜고 끈다. 파라미터를 **살아 있는 채로** 몬다.\npath: CHOP 경로.\nenable: True 면 켜고 False 면 끈다.",
+      "source_hash": "64ad9228ce79",
+      "summary": "Turns a CHOP's export flag on or off. Drives parameters **live**.",
+      "args": {
+        "path": "CHOP path.",
+        "enable": "True turns it on, False turns it off."
+      }
+    },
+    "export_channels": {
+      "source": "CHOP 출력을 클립 파일로 쓴다. 채널 이름이 보존된다.\npath: CHOP 경로.\nfile_path: 쓸 파일 경로. .clip / .bclip / .bclip.sc. $HIP 같은 변수를 그대로 쓴다.",
+      "source_hash": "8dd6d486e293",
+      "summary": "Writes CHOP output to a clip file. Channel names are preserved.",
+      "args": {
+        "path": "CHOP path.",
+        "file_path": "File path to write. .clip / .bclip / .bclip.sc. Variables such as $HIP are kept as is."
+      }
+    },
+    "import_channels": {
+      "source": "채널 파일을 File CHOP 으로 읽어 들이고, 실제로 무엇이 들어왔는지 돌려준다.\nparent: CHOP 네트워크 경로.\nfile_path: 읽을 파일 경로. $HIP 같은 변수를 그대로 쓴다 - File CHOP 에 원문으로 걸린다.\ncomment: 이 채널이 무엇인지. 영어로 적는다.\nname: 노드 이름. 생략하면 Houdini 가 정한다.",
+      "source_hash": "3f188a0c75dd",
+      "summary": "Reads a channel file into a File CHOP and returns what actually came in.",
+      "args": {
+        "parent": "CHOP network path.",
+        "file_path": "File path to read. Variables such as $HIP are kept as is - the raw string goes into the File CHOP.",
+        "comment": "What these channels are. Write it in English.",
+        "name": "Node name. Houdini picks one if omitted."
+      }
+    },
+    "export_parm_channels": {
+      "source": "파라미터 애니메이션을 `.chan` / `.bchan` 으로 쓴다. 다른 DCC 가 읽는다.\nparms: 내보낼 파라미터 경로들. 예: [\"/obj/cam/tx\", \"/obj/cam/ty\"]\nfile_path: 쓸 파일 경로. .chan 또는 .bchan. $HIP 같은 변수를 그대로 쓴다.\nstart_frame: 시작 프레임. 생략하면 씬의 전역 시작.\nend_frame: 끝 프레임(포함). 생략하면 씬의 전역 끝.",
+      "source_hash": "f15ae0a02b9f",
+      "summary": "Writes parameter animation to `.chan` / `.bchan`, readable by other DCCs.",
+      "args": {
+        "parms": "Parameter paths to export. Example: [\"/obj/cam/tx\", \"/obj/cam/ty\"]",
+        "file_path": "File path to write. .chan or .bchan. Variables such as $HIP are kept as is.",
+        "start_frame": "Start frame. Defaults to the scene's global start.",
+        "end_frame": "End frame (inclusive). Defaults to the scene's global end."
+      }
+    },
+    "import_parm_channels": {
+      "source": "`.chan` / `.bchan` 을 파라미터 키프레임으로 읽어 넣는다.\nparms: 받을 파라미터 경로들. 컬럼 순서와 같아야 한다.\nfile_path: 읽을 파일 경로. .chan 또는 .bchan. $HIP 같은 변수를 그대로 쓴다.\nstart_frame: 넣을 구간 시작 프레임. 생략하면 씬의 전역 시작.\nend_frame: 끝 프레임(포함). 생략하면 씬의 전역 끝.",
+      "source_hash": "7be070ffd386",
+      "summary": "Reads `.chan` / `.bchan` into parameter keyframes.",
+      "args": {
+        "parms": "Parameter paths that receive the values, in the same order as the columns.",
+        "file_path": "File path to read. .chan or .bchan. Variables such as $HIP are kept as is.",
+        "start_frame": "Start frame of the range to fill. Defaults to the scene's global start.",
+        "end_frame": "End frame (inclusive). Defaults to the scene's global end."
+      }
+    },
+    "bake_channels": {
+      "source": "파라미터에 걸린 식을 키프레임으로 굽는다. 값이 보존됐는지 확인해서 준다.\nparms: 구울 파라미터 경로들. 예: [\"/obj/cam/tx\", \"/obj/cam/rz\"]\nstart_frame: 시작 프레임. 생략하면 씬의 전역 시작.\nend_frame: 끝 프레임(포함). 생략하면 씬의 전역 끝.\nstep: 키 간격(프레임). 1 이면 매 프레임.\ninterpolation: constant / linear / cubic / bezier / ease. 기본 linear.\nkeep_expression: True 면 식을 지우지 않고 키만 더한다. 보통 False 다.",
+      "source_hash": "8676b1e51481",
+      "summary": "Bakes parameter expressions to keyframes and returns a check that the values were preserved.",
+      "args": {
+        "parms": "Parameter paths to bake. Example: [\"/obj/cam/tx\", \"/obj/cam/rz\"]",
+        "start_frame": "Start frame. Defaults to the scene's global start.",
+        "end_frame": "End frame (inclusive). Defaults to the scene's global end.",
+        "step": "Key spacing in frames. 1 means every frame.",
+        "interpolation": "constant / linear / cubic / bezier / ease. Default linear.",
+        "keep_expression": "True adds keys without removing the expression. Usually False."
+      }
+    },
+    "load_audio": {
+      "source": "오디오 파일을 File CHOP 으로 읽고 파형을 분석해서 돌려준다.\nparent: CHOP 네트워크 경로. create_chop_network 가 돌려준 것.\nfile_path: 오디오 파일 경로. .wav 를 확인했다. $HIP 같은 변수를 그대로 쓴다.\ncomment: 이 오디오가 무엇인지. 영어로 적는다.\nname: 노드 이름. 생략하면 Houdini 가 정한다.\nenvelope_points: 포락선 점 수. 기본 64\nset_audio_flag: True 면 이 CHOP 을 씬의 오디오 소스로 지정한다.",
+      "source_hash": "a0e2c7c590f7",
+      "summary": "Reads an audio file into a File CHOP, analyses the waveform and returns the result.",
+      "args": {
+        "parent": "CHOP network path, as returned by create_chop_network.",
+        "file_path": "Audio file path. .wav has been verified. Variables such as $HIP are kept as is.",
+        "comment": "What this audio is. Write it in English.",
+        "name": "Node name. Houdini picks one if omitted.",
+        "envelope_points": "Number of envelope points. Default 64",
+        "set_audio_flag": "True makes this CHOP the scene's audio source."
+      }
+    }
+  }
+}

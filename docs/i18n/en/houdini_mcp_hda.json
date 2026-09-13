@@ -1,0 +1,245 @@
+{
+  "pack": "houdini_mcp_hda",
+  "overview": {
+    "text": {
+      "source": "HDA 저작·관리 툴 팩 — 서브넷을 디지털 에셋으로 굽고, 인터페이스를 짓고,\n설치하고, 버전 관리한다.\n\n    create      서브넷 → HDA, 정의 복사\n    interface   HDA **정의**의 파라미터 인터페이스 — 추가·승격·삭제·재배치\n    sections    정의 안의 섹션 — PythonModule, OnCreated 등 콜백 스크립트\n    manage      설치·해제·리로드·조회\n    vcs         Git 친화 디렉토리로 펼치고 다시 접기\n    check       인스턴스를 실제로 놓고 쿡해서 검증\n\n`houdini_mcp_base` 의 parmedit 과 경계가 다르다. 거기는 **노드 인스턴스 하나**에\n스페어 파라미터를 붙인다(그 노드에만 남는다). 여기는 **HDA 정의**의 인터페이스를\n고친다(그 타입의 모든 인스턴스가 함께 바뀌고 .hda 파일에 저장된다).\n\n파라미터 템플릿을 만드는 일은 base 의 `parmtemplate` 헬퍼를 그대로 쓴다.\nDialogScript 문자열을 손으로 조립하지 않는다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "3bf27a569ca3",
+      "en": "HDA authoring and management tool pack — bakes subnets into digital assets, builds interfaces,\ninstalls them and keeps them under version control.\n\n    create      subnet → HDA, copying definitions\n    interface   parameter interface of an HDA **definition** — add, promote, remove, reorder\n    sections    sections inside a definition — callback scripts such as PythonModule, OnCreated\n    manage      install, uninstall, reload, query\n    vcs         expand into a Git-friendly directory and collapse back\n    check       verifies by actually placing and cooking an instance\n\nThe boundary with parmedit in `houdini_mcp_base` differs. That module adds spare parameters to\n**one node instance** (they stay on that node only). This pack changes the interface of the\n**HDA definition** (every instance of the type changes along with it, and it is saved to the\n.hda file).\n\nParameter templates are built with base's `parmtemplate` helper as is. DialogScript strings are\nnot assembled by hand.\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "create": {
+      "source": "서브넷을 디지털 에셋으로 굽고, 정의를 다른 파일로 옮긴다.",
+      "source_hash": "071e8ace4b6a",
+      "en": "Bake subnets into digital assets and move definitions to other files."
+    },
+    "interface": {
+      "source": "HDA **정의**의 파라미터 인터페이스를 짓는다.",
+      "source_hash": "5d79aab98554",
+      "en": "Build the parameter interface of an HDA **definition**."
+    },
+    "sections": {
+      "source": "HDA 정의 안의 섹션 — 콜백 스크립트와 헬프를 읽고 쓴다.",
+      "source_hash": "9f618b99c845",
+      "en": "Sections inside an HDA definition — read and write callback scripts and help."
+    },
+    "manage": {
+      "source": "HDA 라이브러리를 세션에 설치·해제·리로드하고 무엇이 들어 있는지 읽는다.",
+      "source_hash": "997fe58db945",
+      "en": "Install, uninstall and reload HDA libraries in the session, and read what they contain."
+    },
+    "vcs": {
+      "source": "HDA 를 Git 이 다룰 수 있는 디렉토리로 펼치고 다시 접는다.",
+      "source_hash": "b4607e65d86d",
+      "en": "Expand HDAs into directories Git can handle, and collapse them back."
+    },
+    "check": {
+      "source": "만든 HDA 가 실제로 도는지 확인한다.",
+      "source_hash": "8b66547746eb",
+      "en": "Confirm that an HDA actually works."
+    }
+  },
+  "tools": {
+    "create_hda": {
+      "source": "서브넷을 디지털 에셋(HDA)으로 굽는다.\npath: 구울 서브넷 노드 경로. 예: /obj/castle/wall_builder\nname: 노드 타입의 핵심 이름. `::` 를 넣지 않는다. 예: brick_maker\nhda_file: 저장할 .hda 파일 경로. 없으면 만든다.\ncomment: 이 에셋이 무엇을 하는지. 영어로. 노드와 정의 양쪽에 달린다.\nnamespace: 타입 이름의 네임스페이스. 예: krafton\nversion: 타입 이름의 버전. 예: \"1.0\"\nlabel: Tab 메뉴에 뜨는 이름. 영어로. 생략하면 Houdini 가 정한다.\nicon: 아이콘 이름. 예: SOP_box\nmin_inputs: 최소 입력 개수.\nmax_inputs: 최대 입력 개수. 0 이면 입력이 없다.",
+      "source_hash": "b2ecdd23eb6e",
+      "summary": "Bakes a subnet into a digital asset (HDA).",
+      "args": {
+        "path": "Path of the subnet node to bake. Example: /obj/castle/wall_builder",
+        "name": "Core name of the node type. No `::`. Example: brick_maker",
+        "hda_file": ".hda file path to save to. Created if missing.",
+        "comment": "What this asset does, in English. Set on both the node and the definition.",
+        "namespace": "Namespace of the type name. Example: krafton",
+        "version": "Version of the type name. Example: \"1.0\"",
+        "label": "Name shown in the Tab menu, in English. Houdini picks one if omitted.",
+        "icon": "Icon name. Example: SOP_box",
+        "min_inputs": "Minimum number of inputs.",
+        "max_inputs": "Maximum number of inputs. 0 means no inputs."
+      }
+    },
+    "save_as_hda": {
+      "source": "이미 있는 HDA 정의를 다른 .hda 파일로 복사한다. 이름도 바꿀 수 있다.\ntarget: 원본. HDA 인스턴스의 노드 경로거나 노드 타입 이름 (Sop/ns::brick_maker::1.0).\nhda_file: 복사해 넣을 .hda 파일 경로. 없으면 만든다.\nname: 새 핵심 이름. 생략하면 원본 이름 그대로.\nnamespace: 새 네임스페이스. 생략하면 원본 그대로.\nversion: 새 버전. 생략하면 원본 그대로.\nlabel: Tab 메뉴 이름. 영어로.\ninstall: True 면 복사한 뒤 그 파일을 이 세션에 설치한다.",
+      "source_hash": "2d35fbf8477f",
+      "summary": "Copies an existing HDA definition into another .hda file. It can be renamed too.",
+      "args": {
+        "target": "Source. Node path of an HDA instance or a node type name (Sop/ns::brick_maker::1.0).",
+        "hda_file": ".hda file path to copy into. Created if missing.",
+        "name": "New core name. Original name if omitted.",
+        "namespace": "New namespace. Original if omitted.",
+        "version": "New version. Original if omitted.",
+        "label": "Tab menu name, in English.",
+        "install": "True installs that file in this session after copying."
+      }
+    },
+    "hda_interface": {
+      "source": "HDA 정의의 파라미터 인터페이스를 폴더까지 펼쳐 읽는다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름 (Sop/ns::brick_maker::1.0).",
+      "source_hash": "5f0064ee3f60",
+      "summary": "Reads the parameter interface of an HDA definition, expanded down to folders.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name (Sop/ns::brick_maker::1.0)."
+      }
+    },
+    "add_hda_parm": {
+      "source": "HDA 정의의 인터페이스에 파라미터를 새로 붙이고 .hda 파일에 저장한다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름.\nkind: float / int / string / toggle / menu / button / ramp_float / ramp_color / separator.\nname: 내부 이름. 식과 set_parms 가 쓴다. 예: wall_height\nlabel: UI 에 뜨는 이름. 영어로. 예: \"Wall Height\"\nsize: 성분 수. float/int/string 에만 의미가 있다.\ndefault: 기본값. 벡터면 목록으로 주거나 값 하나로 전부 채운다.\nmin_value: 슬라이더 최솟값.\nmax_value: 슬라이더 최댓값.\nmenu_items: menu 종류일 때 고를 값들.\nmenu_labels: 그 값들의 표시 이름.\nstring_type: string 종류일 때 regular / file / node / node_list.\nhelp_text: 파라미터 툴팁. 영어로.\nfolder: 넣을 폴더 경로. 예: [\"Controls\"]. 없으면 만든다.",
+      "source_hash": "fc6f5ef07dd9",
+      "summary": "Adds a new parameter to an HDA definition's interface and saves the .hda file.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name.",
+        "kind": "float / int / string / toggle / menu / button / ramp_float / ramp_color / separator.",
+        "name": "Internal name, used by expressions and set_parms. Example: wall_height",
+        "label": "Name shown in the UI, in English. Example: \"Wall Height\"",
+        "size": "Number of components. Only meaningful for float/int/string.",
+        "default": "Default value. For vectors, give a list or one value to fill every component.",
+        "min_value": "Slider minimum.",
+        "max_value": "Slider maximum.",
+        "menu_items": "Values to choose from for the menu kind.",
+        "menu_labels": "Display names of those values.",
+        "string_type": "For the string kind: regular / file / node / node_list.",
+        "help_text": "Parameter tooltip, in English.",
+        "folder": "Folder path to put it in. Example: [\"Controls\"]. Created if missing."
+      }
+    },
+    "promote_parm": {
+      "source": "내부 노드의 파라미터를 HDA 인터페이스로 끌어올리고 식으로 묶는다.\npath: HDA 인스턴스의 노드 경로. 내부 노드에 닿으려면 인스턴스가 필요하다.\ninner: 그 안쪽 노드의 상대 경로. 예: brick_body\nparm: 올릴 파라미터 이름. 벡터는 튜플 이름으로 준다. 예: size\nname: 인터페이스에서 쓸 새 이름. 생략하면 원래 이름 그대로.\nlabel: UI 에 뜨는 이름. 영어로. 생략하면 원래 라벨 그대로.\nfolder: 넣을 폴더 경로. 예: [\"Controls\"]. 없으면 만든다.\nlink: True 면 내부 파라미터에 식을 걸어 묶는다. False 면 올리기만 한다.",
+      "source_hash": "32b4332a6f1a",
+      "summary": "Promotes an inner node's parameter to the HDA interface and links them with an expression.",
+      "args": {
+        "path": "Node path of the HDA instance. An instance is needed to reach inner nodes.",
+        "inner": "Relative path of the inner node. Example: brick_body",
+        "parm": "Parameter name to promote. Give vectors by tuple name. Example: size",
+        "name": "New name in the interface. Original name if omitted.",
+        "label": "Name shown in the UI, in English. Original label if omitted.",
+        "folder": "Folder path to put it in. Example: [\"Controls\"]. Created if missing.",
+        "link": "True links the inner parameter with an expression. False only promotes it."
+      }
+    },
+    "remove_hda_parm": {
+      "source": "HDA 인터페이스에서 파라미터나 폴더를 뗀다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름.\nname: 뗄 파라미터/폴더의 내부 이름. 벡터는 튜플 이름으로.",
+      "source_hash": "d0fa2a0c81b7",
+      "summary": "Removes a parameter or folder from an HDA interface.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name.",
+        "name": "Internal name of the parameter/folder to remove. Give vectors by tuple name."
+      }
+    },
+    "reorder_hda_parms": {
+      "source": "HDA 인터페이스의 최상위 항목 순서를 바꾼다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름.\norder: 최상위 항목 이름들을 원하는 순서로. 예: [\"size\", \"controls\"]",
+      "source_hash": "bdb4eae81776",
+      "summary": "Changes the order of the top-level entries of an HDA interface.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name.",
+        "order": "Top-level entry names in the desired order. Example: [\"size\", \"controls\"]"
+      }
+    },
+    "hda_sections": {
+      "source": "HDA 정의 안의 섹션을 나열한다. 크기와 언어, 내용 앞부분까지.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름 (Sop/ns::brick_maker::1.0).",
+      "source_hash": "397df6174c1e",
+      "summary": "Lists the sections inside an HDA definition, with size, language and the start of the content.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name (Sop/ns::brick_maker::1.0)."
+      }
+    },
+    "get_hda_section": {
+      "source": "섹션 하나의 내용을 통째로 읽는다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름.\nname: 섹션 이름. 예: PythonModule",
+      "source_hash": "a20d0a99db0f",
+      "summary": "Reads the whole content of one section.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name.",
+        "name": "Section name. Example: PythonModule"
+      }
+    },
+    "set_hda_section": {
+      "source": "섹션 내용을 쓰고 .hda 파일에 저장한다. 없으면 만든다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름.\nname: 섹션 이름. 예: PythonModule, OnCreated, Help\ncontents: 넣을 내용. 스크립트라면 영어 주석으로 쓴다.\nlanguage: python / hscript / text. text 는 스크립트가 아닌 섹션.",
+      "source_hash": "f10e09dca9c7",
+      "summary": "Writes a section's content and saves the .hda file. Creates the section if missing.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name.",
+        "name": "Section name. Examples: PythonModule, OnCreated, Help",
+        "contents": "Content to write. Write comments in English for scripts.",
+        "language": "python / hscript / text. text is for sections that are not scripts."
+      }
+    },
+    "remove_hda_section": {
+      "source": "섹션을 지우고 .hda 파일에 저장한다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름.\nname: 지울 섹션 이름.",
+      "source_hash": "42b3488b12d6",
+      "summary": "Deletes a section and saves the .hda file.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name.",
+        "name": "Name of the section to delete."
+      }
+    },
+    "install_hda": {
+      "source": ".hda 라이브러리를 이 세션에 설치한다. 무엇이 들어오는지 함께 돌려준다.\nfile_path: .hda 또는 .otl 파일 경로.",
+      "source_hash": "0e7e8ec16f70",
+      "summary": "Installs an .hda library in this session, returning what it brings in.",
+      "args": {
+        "file_path": ".hda or .otl file path."
+      }
+    },
+    "uninstall_hda": {
+      "source": ".hda 라이브러리를 이 세션에서 뺀다. 파일은 그대로 둔다.\nfile_path: .hda 파일 경로. 또는 \"Embedded\".\nforce: True 면 인스턴스가 있어도 해제한다.",
+      "source_hash": "d35602ebf674",
+      "summary": "Removes an .hda library from this session. The file is left alone.",
+      "args": {
+        "file_path": ".hda file path, or \"Embedded\".",
+        "force": "True uninstalls even if instances exist."
+      }
+    },
+    "reload_hda": {
+      "source": ".hda 파일을 디스크에서 다시 읽는다. 씬의 인스턴스가 새 정의로 갱신된다.\nfile_path: .hda 파일 경로.",
+      "source_hash": "b1959448ae5a",
+      "summary": "Rereads an .hda file from disk. Instances in the scene update to the new definition.",
+      "args": {
+        "file_path": ".hda file path."
+      }
+    },
+    "list_installed_hdas": {
+      "source": "이 세션에 설치된 HDA 라이브러리와 그 안의 에셋들을 나열한다.\npattern: 글롭 패턴. 예: \"*brick*\", \"*/castle/*\"\ncategory: 노드 카테고리로 거른다. 예: Sop, Object, Lop\nlimit: 돌려줄 라이브러리 최대 개수.",
+      "source_hash": "a8afdddc72d8",
+      "summary": "Lists the HDA libraries installed in this session and the assets inside them.",
+      "args": {
+        "pattern": "Glob pattern. Examples: \"*brick*\", \"*/castle/*\"",
+        "category": "Filter by node category. Examples: Sop, Object, Lop",
+        "limit": "Maximum number of libraries returned."
+      }
+    },
+    "hda_info": {
+      "source": "HDA 정의 하나를 자세히 읽는다 — 메타데이터·옵션·섹션·인스턴스까지.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름 (Sop/ns::brick_maker::1.0).",
+      "source_hash": "a094bf099e9b",
+      "summary": "Reads one HDA definition in detail — metadata, options, sections and instances.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name (Sop/ns::brick_maker::1.0)."
+      }
+    },
+    "expand_hda": {
+      "source": ".hda 파일을 디렉토리로 펼친다. Git 에 올릴 수 있는 모양으로.\nfile_path: 펼칠 .hda 파일 경로.\ndirectory: 펼쳐 넣을 디렉토리. 없으면 만든다.\nuncompress_contents: True 면 먼저 압축을 풀어 저장한다.",
+      "source_hash": "4e80a5f9a878",
+      "summary": "Expands an .hda file into a directory, in a form that can go into Git.",
+      "args": {
+        "file_path": ".hda file path to expand.",
+        "directory": "Directory to expand into. Created if missing.",
+        "uncompress_contents": "True saves the contents uncompressed first."
+      }
+    },
+    "collapse_hda": {
+      "source": "펼쳐 둔 디렉토리를 다시 .hda 파일로 접는다.\ndirectory: `expand_hda` 가 만든 디렉토리.\nfile_path: 만들 .hda 파일 경로. 이미 있으면 덮어쓴다.\ninstall: True 면 접은 뒤 이 세션에 설치한다.",
+      "source_hash": "3775c342bbc5",
+      "summary": "Collapses an expanded directory back into an .hda file.",
+      "args": {
+        "directory": "Directory created by `expand_hda`.",
+        "file_path": ".hda file path to create. Overwritten if it exists.",
+        "install": "True installs it in this session after collapsing."
+      }
+    },
+    "validate_hda": {
+      "source": "HDA 를 실제로 인스턴스화하고 쿡해서 동작하는지 확인한다. 임시 노드는 지운다.\ntarget: HDA 인스턴스의 노드 경로거나 노드 타입 이름 (Sop/ns::brick_maker::1.0).\nparms: 쿡하기 전에 걸어 볼 파라미터. 예: {\"size\": 2.0}\nframe: 검증할 프레임. 생략하면 현재 프레임.",
+      "source_hash": "3c3821720602",
+      "summary": "Actually instantiates and cooks an HDA to confirm it works. Temporary nodes are deleted.",
+      "args": {
+        "target": "Node path of an HDA instance or a node type name (Sop/ns::brick_maker::1.0).",
+        "parms": "Parameters to set before cooking. Example: {\"size\": 2.0}",
+        "frame": "Frame to validate at. Defaults to the current frame."
+      }
+    }
+  }
+}

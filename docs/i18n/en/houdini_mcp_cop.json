@@ -1,0 +1,40 @@
+{
+  "pack": "houdini_mcp_cop",
+  "overview": {
+    "text": {
+      "source": "COP(Copernicus) 전문 팩 - 이미지 네트워크의 결과를 본다.\n\n    preview  cop_preview(노드 출력을 그림으로), cop_layer_info(레이어 수치)\n\n만든 계기(2026-09-13, 성 파괴 씬): COP 으로 석재·지면 텍스처를 만들었는데 결과를\n볼 방법이 없어 파일로 내보낸 뒤 외부 도구로 PNG 를 만들어 봤다. 단일 채널 맵은\n검게 나와 사실상 확인하지 못한 채 재질에 붙였고, 렌더에서 스펀지 같은 품질로\n드러났다. COP 의 composite view 에 해당하는 것을 모델이 직접 볼 수 있어야 한다.\n\n옛 COP2(cop2net)는 다루지 않는다. Houdini 20.5 부터의 Copernicus(copnet)만 받는다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "19c52276677f",
+      "en": "COP (Copernicus) pack - look at the results of image networks.\n\n    preview  cop_preview (node outputs as pictures), cop_layer_info (layer statistics)\n\nWhy it exists (2026-09-13, castle destruction scene): stone and ground textures were built in COP,\nbut there was no way to see the result, so they were exported and turned into PNGs with an\nexternal tool. Single-channel maps came out black, so they were attached to materials without\nreally being checked, and the spongy quality only showed up in the render. The model needs to see\nthe equivalent of the COP composite view directly.\n\nLegacy COP2 (cop2net) is not handled. Only Copernicus (copnet), available since Houdini 20.5, is accepted.\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+    }
+  },
+  "modules": {
+    "preview": {
+      "source": "COP 노드의 결과 이미지를 보고 수치로 읽는다.",
+      "source_hash": "f05c6945c454",
+      "en": "See the images COP nodes produce and read them as numbers."
+    }
+  },
+  "tools": {
+    "cop_preview": {
+      "source": "COP 노드가 만든 이미지를 그림으로 본다. composite view 를 대신한다.\nnodes: COP 노드 경로들. 출력을 고르려면 \":\" 뒤에 이름이나 번호를 붙인다. 최대 16개. 예: [\"/img/tex/noise1\", \"/img/tex/worley1:dist2\"]\nframe: 볼 프레임. 생략하면 현재 프레임.\ntile_size: 칸 하나의 한 변 픽셀. 이미지 비율은 유지한다.\ncolumns: 한 줄의 칸 수.\nnormalize: \"auto\", \"on\"(항상 범위로 늘림), \"off\"(항상 0..1 로 자름).",
+      "source_hash": "dfc21682e5e6",
+      "summary": "Shows the images a COP node produces as pictures. Replaces the composite view.",
+      "args": {
+        "nodes": "COP node paths. To pick an output, append its name or index after \":\". Up to 16. Example: [\"/img/tex/noise1\", \"/img/tex/worley1:dist2\"]",
+        "frame": "Frame to view. Defaults to the current frame.",
+        "tile_size": "Side length of one tile in pixels. The image aspect ratio is kept.",
+        "columns": "Number of tiles per row.",
+        "normalize": "\"auto\", \"on\" (always stretch to the value range), \"off\" (always clamp to 0..1)."
+      }
+    },
+    "cop_layer_info": {
+      "source": "COP 노드의 출력마다 레이어 정보를 수치로 돌려준다.\npath: COP 노드 경로. 예: \"/img/tex/worley1\"\nframe: 볼 프레임. 생략하면 현재 프레임.",
+      "source_hash": "0ae0cfd6c9ff",
+      "summary": "Returns layer information for each output of a COP node as numbers.",
+      "args": {
+        "path": "COP node path. Example: \"/img/tex/worley1\"",
+        "frame": "Frame to view. Defaults to the current frame."
+      }
+    }
+  }
+}

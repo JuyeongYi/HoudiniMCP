@@ -1,12 +1,14 @@
 # houdini_mcp_mat
 
+English: [README.en.md](README.en.md)
+
 > 이 파일은 `scripts/gen_pack_readmes.py` 가 코드에서 생성한다. 손으로 고치지 말고
 > 툴의 docstring 을 고친 뒤 다시 생성한다. 서버와 팩의 구조는
 > [docs/architecture.md](../docs/architecture.md) 를 본다.
 
 | 항목 | 값 |
 |---|---|
-| 패키지 JSON | `houdini_mcp_mat.json` |
+| 패키지 JSON | `packages/houdini_mcp_mat.json` |
 | requires | `houdini_mcp`, `houdini_mcp_base` |
 | 툴 | 20개 |
 | 모듈 (`TOOL_MODULES`) | `build`, `query`, `assign`, `texture`, `color`, `preset` |

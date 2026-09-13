@@ -7,6 +7,12 @@ backup/
 *.autosave
 *.hip.bak
 
+# 실행 스크립트가 만드는 임시 패키지 디렉토리 (run-houdini.ps1 -NoTools)
+build/
+
+# 기존 구현 조사 자료 (로컬에만 둔다)
+docs/research/
+
 # 로그 (HOUDINI_MCP_LOG_DIR 을 repo 안으로 지정했을 때)
 log/
 houdini_mcp.jsonl*

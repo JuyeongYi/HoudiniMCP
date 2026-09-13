@@ -1,0 +1,12 @@
+{
+    "requires": [
+        "houdini_mcp",
+        "houdini_mcp_base"
+    ],
+    "env": [
+        {
+            "HOUDINI_MCP_RIG": "$HOUDINI_PACKAGE_PATH/../houdini_mcp_rig"
+        }
+    ],
+    "hpath": "$HOUDINI_MCP_RIG"
+}
