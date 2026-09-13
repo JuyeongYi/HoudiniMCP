@@ -174,6 +174,7 @@ hython -c "from houdini_mcp import get_registry; print(len(get_registry()))"
 | 10 | `houdini_mcp_rig` | [rig.md](rig.md) | ~18 | `apex` |
 | 11 | `houdini_mcp_top` | [top.md](top.md) | ~14 | `pdg` |
 | 12 | `houdini_mcp_cop` | 팩 docstring | 2 (시작) | `hou.ImageLayer`, `OpenImageIO` |
+| 13 | `houdini_mcp_dop_rbd` | [dop.md](dop.md) 하위 팩 절 | 2 (시작) | `numpy`, `geometryAtFrame` |
 
 `houdini_mcp_cop` 은 설계 문서 없이 필요가 먼저 드러나 만들었다(2026-09-13). 성 씬의
 텍스처를 COP 으로 만들고도 결과를 볼 수 없어 품질 문제를 렌더에서야 알았다.
