@@ -534,11 +534,19 @@ def rbd_sim_report(
         }
         if groups:
             by_group: dict[str, dict[str, Any]] = {}
+            sums: dict[str, numpy.ndarray] = {}
             for k, n in enumerate(present):
-                entry = by_group.setdefault(groups.get(n, "?"), {"moved": 0, "moved_1m": 0, "max_disp_m": 0.0})
+                key = groups.get(n, "?")
+                entry = by_group.setdefault(key, {"count": 0, "moved": 0, "moved_1m": 0, "max_disp_m": 0.0})
+                entry["count"] += 1
                 entry["moved"] += int(disp[k] > moved_threshold)
                 entry["moved_1m"] += int(disp[k] > 1.0)
                 entry["max_disp_m"] = max(entry["max_disp_m"], round(float(disp[k]), 3))
+                sums[key] = sums.get(key, numpy.zeros(3)) + disp_vec[k]
+            for key, entry in by_group.items():
+                # 평균 이동이 크고 고르면 부서진 게 아니라 통째로 밀린 것이다(벽돌 성 실측:
+                # 본관 전체가 +x 로 1.2m 밀렸는데 moved_1m 만 보면 붕괴처럼 보였다).
+                entry["mean_disp"] = [round(float(v), 2) for v in sums[key] / entry["count"]]
             row["by_group"] = by_group
         if cport is not None:
             count = _geometry(node, cport, frame).intrinsicValue("primitivecount")
