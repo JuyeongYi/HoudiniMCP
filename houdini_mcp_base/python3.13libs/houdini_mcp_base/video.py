@@ -154,8 +154,9 @@ def _capture_frame(frame: float, width: int, height: int, directory: Path, index
     scratch = directory / f"capture_{index:06d}"
     scratch.mkdir()
     try:
-        written = viewport._flipbook_frame(viewer, frame, width, height, scratch)
-        target = directory / f"frame.{index + 1:06d}.png"
+        # PNG 로 받으면 배경이 투명해 영상에서 검게 나온다(실측). JPG 는 뷰포트 배경이 남는다.
+        written = viewport._flipbook_frame(viewer, frame, width, height, scratch, image_format="jpg")
+        target = directory / f"frame.{index + 1:06d}.jpg"
         shutil.move(str(written), str(target))
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
@@ -428,6 +429,9 @@ def compare_videos(
     고치기 전과 후를 같은 시간축에서 보려는 것이다. 소스마다 영상 파일이나 이미지
     시퀀스를 줄 수 있고 둘이 섞여도 된다. 길이가 다르면 짧은 쪽이 마지막 프레임에
     멈춘 채 긴 쪽이 끝날 때까지 이어진다.
+
+    make_video 로 이미 라벨을 구워 넣은 영상이면 그쪽 label 을 None 으로 준다. 같은
+    자리에 라벨이 겹쳐 읽을 수 없게 된다.
 
     `FFMPEG_BIN_PATH` 환경변수(ffmpeg·ffprobe 가 든 bin 디렉토리)가 없으면 아무것도
     하지 않고 에러를 낸다.

@@ -159,9 +159,16 @@ def _flipbook_frame(
     height: int,
     directory: Path,
     crop_to_camera: bool = False,
+    image_format: str = "png",
 ) -> Path:
-    """한 프레임을 flipbook 으로 PNG 에 쓰고, 실제로 쓰인 파일을 돌려준다."""
-    output = directory / "snapshot.png"
+    """한 프레임을 flipbook 으로 이미지에 쓰고, 실제로 쓰인 파일을 돌려준다.
+
+    PNG 는 알파가 있고 배경이 투명(0,0,0,0)으로 저장된다(실측). 알파를 버리는 곳
+    (영상)에서는 배경이 검게 된다. 뷰포트 배경색이 필요하면 jpg 로 받는다 - JPG 는
+    배경 회색이 그대로 남는다. BMP 는 배경이 더 어둡게, TGA 는 PNG 처럼 투명하게
+    저장됐다.
+    """
+    output = directory / f"snapshot.{image_format}"
 
     settings = viewer.flipbookSettings().stash()
     settings.frameRange([frame, frame])
@@ -199,11 +206,11 @@ def _find_output(expected: Path) -> Path | None:
     """flipbook 이 실제로 쓴 파일을 찾는다.
 
     프레임 패턴을 주지 않아도 Houdini 가 파일명에 프레임 번호를 붙일 수 있어서,
-    기대한 이름이 없으면 같은 디렉토리에서 png 를 찾는다.
+    기대한 이름이 없으면 같은 디렉토리에서 같은 확장자 파일을 찾는다.
     """
     if expected.exists():
         return expected
-    candidates = sorted(expected.parent.glob("*.png"))
+    candidates = sorted(expected.parent.glob(f"*{expected.suffix}"))
     return candidates[0] if candidates else None
 
 
