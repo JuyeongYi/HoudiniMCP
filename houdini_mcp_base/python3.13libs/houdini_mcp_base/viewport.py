@@ -169,7 +169,11 @@ def viewport_info() -> dict[str, Any]:
         "camera": camera.path() if camera is not None else None,
         "camera_locked": viewport.isCameraLockedToView(),
         "frame": hou.frame(),
-        "renderer": viewer.currentHydraRenderer(),
+        "viewing_scene_graph": viewer.isViewingSceneGraph(),
+        # Hydra 렌더러는 LOP 스테이지를 볼 때만 있다. /obj 를 보는 뷰어에서
+        # currentHydraRenderer() 를 부르면 "not a scene graph view" 로 예외가
+        # 난다(GUI 실측 - hython 에는 hou.ui 가 없어 테스트로 잡지 못했다).
+        "renderer": viewer.currentHydraRenderer() if viewer.isViewingSceneGraph() else None,
     }
 
 
@@ -291,10 +295,19 @@ def set_viewport_renderer(name: str | None = None) -> dict[str, Any]:
     볼 수 있지만 훨씬 느리다 - 캡처 한 장을 위해 몇 초에서 몇 분이 걸린다.
     최종 확인이 필요할 때만 바꾸고, 끝나면 되돌린다.
 
+    LOP 스테이지(/stage 등)를 보고 있을 때만 쓸 수 있다. /obj 를 보는 뷰어에는
+    Hydra 렌더러가 없다.
+
     Args:
         name: 렌더러 이름. 생략하면 지금 것과 고를 수 있는 것만 돌려준다.
     """
     viewer = _scene_viewer()
+    if not viewer.isViewingSceneGraph():
+        raise ValueError(
+            f"뷰어가 {viewer.pwd().path()} 를 보고 있어 Hydra 렌더러가 없습니다. "
+            f"렌더러는 LOP 스테이지를 볼 때만 바뀝니다 - set_current_network('/stage') 로 "
+            f"LOP 네트워크를 띄운 뒤 다시 부르세요."
+        )
     available = list(viewer.hydraRenderers())
     if name is None:
         return {"current": viewer.currentHydraRenderer(), "available": available}
