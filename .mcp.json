@@ -3,6 +3,14 @@
     "houdini": {
       "type": "http",
       "url": "http://127.0.0.1:22926/mcp"
+    },
+    "khouwledge": {
+      "type": "http",
+      "url": "http://${KHOUWLEDGE_HOST:-192.168.0.11}:${KHOUWLEDGE_PORT:-3000}/mcp",
+      "headers": {
+        "Authorization": "Bearer 4SDHz4yqkzEI4xgl2wWrnXo4u9JrXwnU",
+        "X-KH-Session": "${KHOUWLEDGE_SESSION:-unnamed}"
+      }
     }
   }
 }
