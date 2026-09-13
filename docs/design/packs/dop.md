@@ -158,7 +158,12 @@ File DOP 은 **시뮬 타임스텝마다** 쓴다. 서브스텝이 2면 파일�
 
 - `houdini_mcp_dop_pyro` — 소스 플러밍, 연소·확산·난류·업레스
 - `houdini_mcp_dop_flip` — 점성·표면장력·화이트워터·메시화
-- `houdini_mcp_dop_rbd` — 프랙처·컨스트레인트·글루
+- `houdini_mcp_dop_rbd` — 프랙처·컨스트레인트·글루. **진단부터 시작했다
+  (2026-09-13).** `rbd_piece_stats`(시뮬 전 조각 부피·질량·얇은 파편·glue 없는
+  조각), `rbd_sim_report`(프레임별 이동·끊긴 제약·충돌 전 움직임). dopnet 이
+  아니라 packed 조각을 내는 SOP 을 받아 RBD Bullet Solver SOP 도 본다. 만든
+  계기와 실측은 `diagnose.py` 모듈 docstring 에 있다. 프랙처·제약 생성 툴은
+  아직 없다.
 - `houdini_mcp_dop_vellum` — 천·헤어·소프트바디
 
 하위 팩이 쓸 수 있는 것: `_common.recipes()` 의 타입 표는 하위 팩이 그대로

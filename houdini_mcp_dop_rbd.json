@@ -1,0 +1,13 @@
+{
+    "requires": [
+        "houdini_mcp",
+        "houdini_mcp_base",
+        "houdini_mcp_dop"
+    ],
+    "env": [
+        {
+            "HOUDINI_MCP_DOP_RBD": "$HOUDINI_PACKAGE_PATH/houdini_mcp_dop_rbd"
+        }
+    ],
+    "hpath": "$HOUDINI_MCP_DOP_RBD"
+}
