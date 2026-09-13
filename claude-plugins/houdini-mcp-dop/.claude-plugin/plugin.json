@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-dop",
+  "displayName": "Houdini MCP - DOP",
+  "version": "0.1.0",
+  "description": "Skill and debugging subagent for building DOP simulations directly, test runs, caching and diagnosis with the houdini_mcp_dop tools, including Vellum cloth loops.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "dop", "simulation", "vellum"],
+  "dependencies": ["houdini-mcp"]
+}

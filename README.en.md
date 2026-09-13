@@ -84,6 +84,23 @@ Or in a project's `.mcp.json`:
 When running two Houdini instances, give the second one a different port (`HOUDINI_MCP_PORT`, or
 `scripts/run-houdini.ps1 -Port 22927`). On the same port only the first instance opens a server.
 
+## Claude Code plugins
+
+Skills and subagents that teach when and how to use each pack's tools are bundled as plugins and
+served from this repository as a marketplace (`claude-plugins/`). The common `houdini-mcp` plugin
+also provides the MCP server connection.
+
+Add **the same clone Houdini uses** as a local marketplace. Adding the GitHub URL would clone the
+repository a second time.
+
+```text
+/plugin marketplace add /path/to/HoudiniMCP
+/plugin install houdini-mcp@houdini-mcp
+```
+
+If a project `.mcp.json` also connects the same server, the tools appear twice; use only one.
+Details and updating: [claude-plugins/README.md](claude-plugins/README.md).
+
 ## Tool packs
 
 | Pack | Contents | Tool list |

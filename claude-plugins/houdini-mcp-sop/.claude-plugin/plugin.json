@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-sop",
+  "displayName": "Houdini MCP - SOP",
+  "version": "0.1.0",
+  "description": "Skill for procedural SOP modelling with the houdini_mcp_sop tools: build, measure every step, fix topology and UVs.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "sop", "modeling"],
+  "dependencies": ["houdini-mcp"]
+}

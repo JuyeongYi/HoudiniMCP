@@ -80,6 +80,23 @@ claude mcp add --transport http houdini http://127.0.0.1:22926/mcp
 Houdini 를 두 개 띄울 때는 두 번째에 다른 포트를 준다(`HOUDINI_MCP_PORT`,
 `scripts/run-houdini.ps1 -Port 22927`). 같은 포트면 먼저 뜬 쪽만 서버를 연다.
 
+## Claude Code 플러그인
+
+팩마다 툴을 언제·어떻게 쓰는지 알려 주는 스킬과 서브에이전트를 플러그인으로 묶어 이
+저장소에서 마켓플레이스로 제공한다(`claude-plugins/`, 영어). 공통 플러그인 `houdini-mcp` 가
+MCP 서버 연결도 맡는다.
+
+Houdini 가 쓰는 **같은 클론**을 로컬 마켓플레이스로 추가한다. GitHub URL 로 추가하면 저장소가
+한 번 더 클론된다.
+
+```text
+/plugin marketplace add /path/to/HoudiniMCP
+/plugin install houdini-mcp@houdini-mcp
+```
+
+프로젝트 `.mcp.json` 에도 같은 서버가 있으면 툴이 두 번 보이므로 한쪽만 쓴다. 자세한 내용과
+갱신 방법은 [claude-plugins/README.md](claude-plugins/README.md).
+
 ## 툴 팩
 
 | 팩 | 담는 것 | 툴 목록 |

@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-vex",
+  "displayName": "Houdini MCP - VEX",
+  "version": "0.1.0",
+  "description": "Skill for writing, compiling and diagnosing VEX wrangles with the houdini_mcp_vex tools.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "vex", "wrangle"],
+  "dependencies": ["houdini-mcp"]
+}

@@ -1,0 +1,102 @@
+{
+  "name": "houdini-mcp",
+  "owner": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "description": "Claude Code plugins for Houdini MCP: the MCP server connection plus skills and subagents for each Houdini tool pack.",
+  "version": "0.1.0",
+  "plugins": [
+    {
+      "name": "houdini-mcp",
+      "source": "./claude-plugins/houdini-mcp",
+      "description": "Connects to the Houdini MCP server and teaches the working rules, visual verification and scene debugging (houdini_mcp + houdini_mcp_base).",
+      "category": "houdini",
+      "keywords": ["houdini", "mcp", "vfx"]
+    },
+    {
+      "name": "houdini-mcp-sop",
+      "source": "./claude-plugins/houdini-mcp-sop",
+      "description": "Procedural SOP modelling with measured before/after results (houdini_mcp_sop).",
+      "category": "houdini",
+      "keywords": ["houdini", "sop", "modeling"]
+    },
+    {
+      "name": "houdini-mcp-vex",
+      "source": "./claude-plugins/houdini-mcp-vex",
+      "description": "Writing and validating VEX wrangles with the vcc compiler (houdini_mcp_vex).",
+      "category": "houdini",
+      "keywords": ["houdini", "vex", "wrangle"]
+    },
+    {
+      "name": "houdini-mcp-mat",
+      "source": "./claude-plugins/houdini-mcp-mat",
+      "description": "MaterialX look development, texture checks and assignments (houdini_mcp_mat).",
+      "category": "houdini",
+      "keywords": ["houdini", "materialx", "lookdev"]
+    },
+    {
+      "name": "houdini-mcp-lop",
+      "source": "./claude-plugins/houdini-mcp-lop",
+      "description": "Inspecting and editing composed USD stages in Solaris (houdini_mcp_lop).",
+      "category": "houdini",
+      "keywords": ["houdini", "usd", "solaris"]
+    },
+    {
+      "name": "houdini-mcp-render",
+      "source": "./claude-plugins/houdini-mcp-render",
+      "description": "Checking, running and verifying renders by reading the result pixels (houdini_mcp_render).",
+      "category": "houdini",
+      "keywords": ["houdini", "karma", "render"]
+    },
+    {
+      "name": "houdini-mcp-dop",
+      "source": "./claude-plugins/houdini-mcp-dop",
+      "description": "Building DOP simulations directly, test runs, caching and debugging (houdini_mcp_dop).",
+      "category": "houdini",
+      "keywords": ["houdini", "dop", "simulation", "vellum"]
+    },
+    {
+      "name": "houdini-mcp-dop-rbd",
+      "source": "./claude-plugins/houdini-mcp-dop-rbd",
+      "description": "RBD destruction setup and diagnosis of pieces and simulations (houdini_mcp_dop_rbd).",
+      "category": "houdini",
+      "keywords": ["houdini", "rbd", "destruction"]
+    },
+    {
+      "name": "houdini-mcp-hda",
+      "source": "./claude-plugins/houdini-mcp-hda",
+      "description": "Authoring, installing and version-controlling HDAs (houdini_mcp_hda).",
+      "category": "houdini",
+      "keywords": ["houdini", "hda", "digital-asset"]
+    },
+    {
+      "name": "houdini-mcp-rig",
+      "source": "./claude-plugins/houdini-mcp-rig",
+      "description": "KineFX skeletons, skin weights and APEX rig graphs with validation (houdini_mcp_rig).",
+      "category": "houdini",
+      "keywords": ["houdini", "kinefx", "apex", "rigging"]
+    },
+    {
+      "name": "houdini-mcp-chop",
+      "source": "./claude-plugins/houdini-mcp-chop",
+      "description": "Analysing channels, loops, spikes, baking and audio (houdini_mcp_chop).",
+      "category": "houdini",
+      "keywords": ["houdini", "chop", "animation"]
+    },
+    {
+      "name": "houdini-mcp-io",
+      "source": "./claude-plugins/houdini-mcp-io",
+      "description": "Exporting and importing USD, Alembic, FBX and geometry with read-back verification (houdini_mcp_io).",
+      "category": "houdini",
+      "keywords": ["houdini", "export", "usd", "alembic", "fbx"]
+    },
+    {
+      "name": "houdini-mcp-cop",
+      "source": "./claude-plugins/houdini-mcp-cop",
+      "description": "Building Copernicus (COP) textures and checking them as images and numbers (houdini_mcp_cop).",
+      "category": "houdini",
+      "keywords": ["houdini", "cop", "copernicus", "texture"]
+    }
+  ]
+}

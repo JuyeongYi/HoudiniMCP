@@ -1,0 +1,22 @@
+{
+  "name": "houdini-mcp",
+  "displayName": "Houdini MCP",
+  "version": "0.1.0",
+  "description": "Connects Claude Code to the MCP server running inside Houdini and teaches the working rules, visual verification and scene debugging for the server and the base tool pack.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "mcp", "vfx"],
+  "userConfig": {
+    "port": {
+      "type": "number",
+      "title": "Houdini MCP port",
+      "description": "Port of the MCP server inside Houdini (HOUDINI_MCP_PORT). Use a different port for a second Houdini instance.",
+      "default": 22926,
+      "min": 1,
+      "max": 65535
+    }
+  }
+}

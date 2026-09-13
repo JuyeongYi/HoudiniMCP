@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-dop-rbd",
+  "displayName": "Houdini MCP - RBD",
+  "version": "0.1.0",
+  "description": "Skill and diagnostic subagent for RBD destruction: preparing pieces, constraints and reading simulations with the houdini_mcp_dop_rbd tools.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "rbd", "destruction"],
+  "dependencies": ["houdini-mcp", "houdini-mcp-dop"]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-render",
+  "displayName": "Houdini MCP - Render",
+  "version": "0.1.0",
+  "description": "Skill and QC subagent for checking, running and verifying Karma/Hydra renders with the houdini_mcp_render tools.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "karma", "render"],
+  "dependencies": ["houdini-mcp"]
+}

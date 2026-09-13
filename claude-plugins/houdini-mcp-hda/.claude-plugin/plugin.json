@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-hda",
+  "displayName": "Houdini MCP - HDA",
+  "version": "0.1.0",
+  "description": "Skill for authoring, validating, installing and version-controlling Houdini Digital Assets with the houdini_mcp_hda tools.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "hda", "digital-asset"],
+  "dependencies": ["houdini-mcp"]
+}

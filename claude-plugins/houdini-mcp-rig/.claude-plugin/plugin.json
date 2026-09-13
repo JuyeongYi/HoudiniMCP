@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-rig",
+  "displayName": "Houdini MCP - Rigging",
+  "version": "0.1.0",
+  "description": "Skill for KineFX skeletons, skinning and APEX rig graphs with validation, using the houdini_mcp_rig tools.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "kinefx", "apex", "rigging"],
+  "dependencies": ["houdini-mcp"]
+}

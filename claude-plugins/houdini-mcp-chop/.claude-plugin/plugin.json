@@ -1,0 +1,13 @@
+{
+  "name": "houdini-mcp-chop",
+  "displayName": "Houdini MCP - CHOP",
+  "version": "0.1.0",
+  "description": "Skill for analysing and transferring animation channels, loops, spikes, baking and audio with the houdini_mcp_chop tools.",
+  "author": {
+    "name": "JuyeongYi",
+    "url": "https://github.com/JuyeongYi"
+  },
+  "repository": "https://github.com/JuyeongYi/HoudiniMCP",
+  "keywords": ["houdini", "chop", "animation"],
+  "dependencies": ["houdini-mcp"]
+}
