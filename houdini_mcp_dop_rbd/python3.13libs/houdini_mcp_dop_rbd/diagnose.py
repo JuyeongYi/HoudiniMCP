@@ -509,12 +509,23 @@ def rbd_sim_report(
     if cport is not None and len(rows) > 1 and first_constraints:
         lost = first_constraints - rows[1]["constraints"]
         if lost / first_constraints > START_BREAK_WARN:
-            warnings.append(
+            span = (
                 f"프레임 {rows[0]['frame']:g} → {rows[1]['frame']:g} 사이에 제약 "
                 f"{first_constraints}개 중 {lost}개({lost / first_constraints:.0%})가 끊겼습니다. "
-                f"아무것도 부딪히기 전이라면 시작 충격입니다 - rbd_piece_stats 로 얇은 파편과 "
-                f"glue 없는 조각을 보세요."
             )
+            if rows[1]["moved"]:
+                warnings.append(
+                    span + f"조각 {rows[1]['moved']}개도 움직였습니다. 아무것도 부딪히기 전이라면 "
+                    f"시작 충격입니다 - rbd_piece_stats 로 얇은 파편과 glue 없는 조각을 보세요."
+                )
+            else:
+                # 성 씬 실측: 강도 3e6 에서 32% 가 끊겼지만 이동은 0.036m 였다. 조각을
+                # 지워도 끊김은 남으므로 파편 탓으로 안내하면 틀린 곳을 고치게 된다.
+                warnings.append(
+                    span + f"다만 {moved_threshold}m 넘게 움직인 조각은 없어 형태는 그대로입니다. "
+                    f"맞붙은 조각의 첫 스텝 접촉 충격으로 보입니다. 충돌 뒤 파괴가 약하다면 "
+                    f"남은 제약이 적어진 탓일 수 있으니 broken 추이를 함께 보세요."
+                )
     if quiet_until is not None:
         result["moved_before_quiet_until"] = quiet_movers
         if quiet_movers:
