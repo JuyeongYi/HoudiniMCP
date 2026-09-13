@@ -188,7 +188,7 @@ def _inspect(raw: str, usage: str = "", colorspace: str = "") -> dict[str, Any]:
         info["exists"] = False
         info["error"] = (
             f"파일이 없습니다: {resolved}. 경로가 맞는지, $HIP 이 기대한 곳을 "
-            f"가리키는지 확인하세요. list_textures 로 씬이 참조하는 이미지를 "
+            f"가리키는지 확인하세요. list_dependencies(kinds=['Image']) 로 씬이 참조하는 이미지를 "
             f"전부 볼 수 있습니다."
         )
         return info
@@ -383,61 +383,6 @@ def _image_file_references() -> list[tuple[hou.Parm, str]]:
             continue
         entries.append((parm, raw))
     return entries
-
-
-@tool()
-def list_textures(inspect: bool = False, missing_only: bool = False) -> dict[str, Any]:
-    """씬이 참조하는 텍스처를 전부 나열하고 존재 여부를 확인한다.
-
-    hou.fileReferences() 로 씬 전체의 파일 참조를 긁어 이미지만 남긴다. 어느
-    노드의 어느 파라미터가 참조하는지까지 알려 주므로, 링크가 깨진 텍스처를
-    찾아 고칠 수 있다.
-
-    Args:
-        inspect: True 면 파일을 열어 해상도·채널까지 읽는다. 느려진다.
-        missing_only: True 면 없는 파일만 돌려준다.
-    """
-    textures: list[dict[str, Any]] = []
-    missing = 0
-    for parm, raw in _image_file_references():
-        if inspect:
-            entry = _inspect(raw)
-        else:
-            resolved = paths.to_path(parm.eval())
-            token, tiles = _udim_tiles(raw)
-            if token is not None:
-                entry = {
-                    "raw": raw,
-                    "resolved": resolved.as_posix(),
-                    "udim": True,
-                    "tile_count": len(tiles),
-                    "exists": bool(tiles),
-                }
-            else:
-                entry = {
-                    "raw": raw,
-                    "resolved": resolved.as_posix(),
-                    "exists": resolved.is_file(),
-                }
-        entry["node"] = parm.node().path()
-        entry["parm"] = parm.name()
-        entry["comment"] = parm.node().comment()
-        if not entry.get("exists"):
-            missing += 1
-        elif missing_only:
-            continue
-        textures.append(entry)
-
-    return {
-        "count": len(textures),
-        "missing": missing,
-        "textures": textures,
-        "hint": (
-            "없는 파일은 경로나 $HIP 을 확인하세요."
-            if missing
-            else "참조된 텍스처가 모두 존재합니다."
-        ),
-    }
 
 
 @tool()

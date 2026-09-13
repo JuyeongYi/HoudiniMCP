@@ -16,25 +16,29 @@
 Houdini 의 의도된 동작이고(어차피 설치본과 함께 온다), 대신 그런 참조는 씬을
 납품할 때 따라가지 않는다는 뜻이므로 알고 있어야 한다.
 
-이미지 텍스처의 내용은 `houdini_mcp_mat` 의 `list_textures` / `texture_info` 가
-다룬다. 여기는 종류를 가리지 않고 **파일을 의존성으로** 본다 — 지오메트리 캐시,
-HDA 라이브러리, USD 레이어, 텍스처가 전부 한 목록에 들어와야 씬을 통째로 옮길
-수 있기 때문이다.
+컨텍스트를 가리지 않으므로 base 에 있다. 처음에는 houdini_mcp_io 에 있었고,
+mat 의 list_textures 가 같은 순회를 이미지만 따로 하고 있었다. 합쳤다 - 텍스처
+목록은 `list_dependencies(kinds=["Image"])` 다. 이미지 **내용**(해상도·채널·
+컬러스페이스)은 houdini_mcp_mat 의 `texture_info` 가 읽는다.
 """
 
 from __future__ import annotations
 
 import shutil
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterator, Sequence
+from typing import Any, Iterable, Iterator, Sequence
 
 import hou
 
 from houdini_mcp import tool, undoable
 
-from houdini_mcp_base import paths
+from . import paths
 
-from ._common import truncate
+def truncate(items: Iterable[Any], limit: int) -> tuple[list[Any], int]:
+    """목록을 잘라 (보여줄 것, 전체 수) 로. 모델 컨텍스트를 태우지 않기 위해서."""
+    collected = list(items)
+    return collected[:limit], len(collected)
+
 
 OUTPUT_PARMS = frozenset(
     {
@@ -67,8 +71,7 @@ MAX_LISTED = 200
 def parm_file_kind(parm: hou.Parm | None) -> str:
     """파라미터 템플릿이 선언한 파일 종류. Image / Geometry / Otl / Usd ...
 
-    mat 팩의 list_textures 가 이미지만 거를 때 쓰는 것과 같은 정보다. 여기서는
-    거르지 않고 분류에 쓴다.
+    kinds 인자로 거르는 기준이다. 이미지만 보려면 kinds=["Image"].
     """
     if parm is None:
         return "Unknown"
@@ -164,7 +167,8 @@ def list_dependencies(
 
     Args:
         kinds: hou.fileType 이름으로 거른다. Geometry / Image / Otl / Usd /
-            Alembic / Fbx / Hip / Directory / Any 등. 생략하면 전부.
+            Alembic / Fbx / Hip / Directory / Any 등. 생략하면 전부. 텍스처만
+            보려면 ["Image"].
         missing_only: True 면 없는 파일만.
         include_outputs: True 면 출력 경로 파라미터도 함께 낸다.
         limit: 목록에 담을 최대 개수. 집계는 전체를 대상으로 한다.

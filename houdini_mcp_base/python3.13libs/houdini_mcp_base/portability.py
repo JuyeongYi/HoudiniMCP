@@ -24,10 +24,8 @@ import hou
 
 from houdini_mcp import tool
 
-from houdini_mcp_base import paths
-
-from ._common import truncate
-from .deps import iter_references, portability_flags
+from . import paths
+from .deps import iter_references, portability_flags, truncate
 
 MAX_LISTED = 100
 
@@ -114,7 +112,7 @@ def validate_scene(include_outputs: bool = False, limit: int = MAX_LISTED) -> di
     shown, total = truncate(issues, max(1, limit))
     blocking = counts.get("missing", 0) + counts.get("empty_sequence", 0)
     return {
-        "hip": str(hip_path),
+        "hip": hip_path.as_posix(),
         "saved": saved,
         "hip_dir": paths.expand("$HIP"),
         "checked": checked,

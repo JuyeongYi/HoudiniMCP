@@ -105,6 +105,17 @@
   - `$HMCP_NOPE/...` 경로는 노드 하나 남기지 않고 거절한다
 - `export_usd` 를 HEAD 코드와 현재 코드로 같은 입력에 돌려 결과가 같다
 
+## 이어서 - 파일 참조 툴도 base 로
+
+헬퍼만이 아니라 **파일 참조를 다루는 툴**도 컨텍스트를 가리지 않는다.
+io 의 `list_dependencies` / `collect_dependencies` / `remap_paths`(→ base `deps`)
+와 `validate_scene`(→ base `portability`)을 옮겼고, mat 의 `list_textures` 는
+같은 `hou.fileReferences()` 순회의 이미지판이라 지우고
+`list_dependencies(kinds=["Image"])` 로 합쳤다. 툴 277 → 276.
+
+파일 인자를 받더라도 도메인 작업인 툴(export_usd, load_audio, create_hda 등)과,
+포맷 지식에 기대는 `probe_file`, 텍스처 캐시인 `reload_textures` 는 팩에 둔다.
+
 ## 남은 것
 
 - `houdini_mcp_mat/color.py` 가 `$OCIO` 를 `expandString` 으로 읽는다. 경로를

@@ -159,8 +159,8 @@ FBX 검증이 얕은 것은 의도적이다. FBX SDK 파이썬 바인딩이 번�
 |---|---|
 | `export` | `write_geometry`, `export_usd`, `export_alembic`, `export_fbx`, `export_formats` |
 | `load` | `probe_file`, `import_geometry`, `import_scene` |
-| `deps` | `list_dependencies`, `collect_dependencies`, `remap_paths` |
-| `check` | `validate_scene` |
+| ~~`deps`~~ | `list_dependencies`, `collect_dependencies`, `remap_paths` → **houdini_mcp_base 의 `deps` 로 옮겼다** |
+| ~~`check`~~ | `validate_scene` → **houdini_mcp_base 의 `portability` 로 옮겼다** |
 
 초안과 달라진 이름과 그 이유:
 

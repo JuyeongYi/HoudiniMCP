@@ -16,6 +16,8 @@
     visualize  어트리뷰트 비주얼라이저 - 값이 어떻게 퍼져 있는지 색으로 본다
     nodetypes  노드 타입 카탈로그 - 무엇을 만들 수 있는지 먼저 본다
     scene      씬 파일 저장·열기, 프레임 범위
+    deps       씬의 파일 참조 - 목록·수집·경로 치환. hou.fileReferences() 로 얻는다
+    portability  씬을 다른 기계로 옮길 수 있는지 판정 - 없는 파일, 박힌 경로
     takes      테이크 - 파라미터 변형을 갈라 두고 오간다
     diagnose   에러·경고 조회와 쿡 - 무엇이 잘못됐는지 알아낸다
     anim       파라미터 식과 키프레임
@@ -49,6 +51,8 @@ TOOL_MODULES = (
     "visualize",
     "nodetypes",
     "scene",
+    "deps",
+    "portability",
     "takes",
     "diagnose",
     "anim",

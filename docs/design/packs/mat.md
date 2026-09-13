@@ -176,7 +176,7 @@ Mantra 시절 경로다. Karma 가 기본 렌더러인 22.0 에서 새로 만드
 | | `list_assignments` | 파라미터가 아니라 결과를 읽는다. SOP 어트리뷰트 / LOP 바인딩 둘 다 |
 | `texture` | `assign_texture` | **붙이기 전에 OIIO 로 파일을 연다.** 없으면 노드를 만들지 않는다. 대상 입력 타입에 맞춰 signature 를 고른다 |
 | | `texture_info` | 해상도·채널·비트뎁스·컬러스페이스·MIP·UDIM 타일 수. `stats=True` 면 픽셀 통계 |
-| | `list_textures` | `hou.fileReferences()` 로 씬 전체를 긁고 존재 여부를 확인한다 |
+| | ~~`list_textures`~~ | **없앴다.** base 의 `list_dependencies(kinds=["Image"])` 와 같은 순회였다. 이미지 내용은 `texture_info` |
 | | `reload_textures` | `texcache -c` + `glcache -c` |
 | `color` | `list_color_spaces` | 하드코딩이 아니라 OCIO 설정에서. 별칭·롤·디스플레이까지 |
 | | `texture_parm_colorspaces` | 파라미터 메뉴가 실제로 받는 값 |
