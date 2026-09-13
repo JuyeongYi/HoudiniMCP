@@ -185,11 +185,45 @@ def _matches(name: str, patterns: Sequence[str]) -> bool:
 # --------------------------------------------------------------------------
 
 
+def _instanced_volumes(geo: hou.Geometry, names: list[str]) -> dict[str, float] | None:
+    """PackedGeometry(copytopoints 인스턴스 등)는 내장 지오메트리 부피 × 변환 행렬식.
+
+    블록 6,141개를 unpack 하면 폴리곤이 16만 개가 되지만, 인스턴스는 모양이
+    몇 개뿐이라 geometryid 로 한 번씩만 잰다. PackedFragment 는 내장 지오메트리를
+    주지 않으므로(실측) None 을 돌려 unpack 으로 넘긴다.
+    """
+    cache: dict[Any, float] = {}
+    volumes: dict[str, float] = {}
+    for prim, name in zip(geo.prims(), names):
+        getter = getattr(prim, "getEmbeddedGeometry", None)
+        if getter is None:
+            return None
+        key = prim.intrinsicValue("geometryid")
+        if key not in cache:
+            embedded = getter()
+            if embedded is None:
+                return None
+            cache[key] = abs(sum(p.intrinsicValue("measuredvolume") for p in embedded.prims()))
+        m = numpy.asarray(prim.intrinsicValue("packedfulltransform"), dtype=numpy.float64).reshape(4, 4)
+        volumes[name] = volumes.get(name, 0.0) + cache[key] * abs(float(numpy.linalg.det(m[:3, :3])))
+    return volumes
+
+
 def _volumes(geo: hou.Geometry, kind: str) -> dict[str, float]:
     unpacked = geo
     if kind == "packed":
+        try:
+            instanced = _instanced_volumes(geo, _names(geo))
+        except hou.Error:
+            instanced = None
+        if instanced is not None:
+            return instanced
         unpacked = hou.Geometry()
-        hou.sopNodeTypeCategory().nodeVerb("unpack").execute(unpacked, [geo])
+        verb = hou.sopNodeTypeCategory().nodeVerb("unpack")
+        # 기본값은 어트리뷰트를 넘기지 않는다(transfer_attributes ""). 그러면 조각
+        # 이름이 사라져 모든 부피가 0 으로 보인다(실측).
+        verb.setParms({"transfer_attributes": "name"})
+        verb.execute(unpacked, [geo])
     if unpacked.findPrimAttrib("name") is None:
         return {}
     names = unpacked.primStringAttribValues("name")
@@ -364,6 +398,23 @@ def _constraint_port(node: hou.SopNode, requested: int | None, output: int) -> i
     return None
 
 
+def _groups(geo: hou.Geometry, attrib: str) -> dict[str, str]:
+    """조각 이름 → 그룹 값(문자열 어트리뷰트). 프림에 있으면 프림, 없으면 점에서 읽는다."""
+    try:
+        if geo.findPrimAttrib(attrib) is not None and geo.findPrimAttrib("name") is not None:
+            return dict(zip(geo.primStringAttribValues("name"), geo.primStringAttribValues(attrib)))
+        if geo.findPrimAttrib(attrib) is not None and geo.countPrimType(hou.primType.PackedPrim):
+            return dict(zip(_names(geo), geo.primStringAttribValues(attrib)))
+        if geo.findPointAttrib(attrib) is not None and geo.findPointAttrib("name") is not None:
+            return dict(zip(geo.pointStringAttribValues("name"), geo.pointStringAttribValues(attrib)))
+    except hou.OperationFailed as exc:
+        raise ValueError(f"group_by 어트리뷰트 {attrib!r} 는 문자열이어야 합니다: {exc}") from exc
+    raise ValueError(
+        f"0번 출력에 조각별 {attrib!r} 문자열 어트리뷰트가 없습니다. 조각을 만든 곳에서 "
+        f"s@{attrib} 를 붙이거나 group_by 를 비우세요."
+    )
+
+
 def _lowest(pieces: Pieces) -> float | None:
     """조각 바닥의 가장 낮은 y. 점 출력이면 중심으로 본다."""
     if not len(pieces.centers):
@@ -385,6 +436,7 @@ def rbd_sim_report(
     constraints_output: int | None = None,
     moved_threshold: float = 0.1,
     output: int = 0,
+    group_by: str = "",
     limit: int = 10,
 ) -> dict[str, Any]:
     """RBD 시뮬을 프레임별로 읽어 무엇이 언제 움직이고 끊겼는지 돌려준다.
@@ -415,6 +467,9 @@ def rbd_sim_report(
         moved_threshold: 이보다 많이 움직이면 "움직였다" 로 센다(m).
         output: 조각을 읽을 출력 번호. RBD Bullet Solver 는 3(Simulation Points)이
             조각마다 점 하나라 가장 빠르다.
+        group_by: 조각별 문자열 어트리뷰트 이름. 주면 프레임마다 그 값별로 움직인 수를
+            나눠 준다(0번 출력에서 읽는다). 예: "part" - 지붕만 떨어지는지 벽도
+            밀리는지 가른다.
         limit: 목록에 담을 조각 수. 최대 50.
     """
     limit = max(1, min(int(limit), MAX_LIMIT))
@@ -431,6 +486,7 @@ def rbd_sim_report(
     first_constraints: int | None = None
     quiet_movers: list[dict[str, Any]] = []
     last_disp: dict[str, numpy.ndarray] = {}
+    groups = _groups(_geometry(node, 0, picked[0]), group_by) if group_by else {}
 
     for frame in picked:
         began = time.perf_counter()
@@ -476,6 +532,14 @@ def rbd_sim_report(
             "max_disp_m": round(float(disp.max()), 3) if disp.size else 0.0,
             "lowest_y": _lowest(pieces),
         }
+        if groups:
+            by_group: dict[str, dict[str, Any]] = {}
+            for k, n in enumerate(present):
+                entry = by_group.setdefault(groups.get(n, "?"), {"moved": 0, "moved_1m": 0, "max_disp_m": 0.0})
+                entry["moved"] += int(disp[k] > moved_threshold)
+                entry["moved_1m"] += int(disp[k] > 1.0)
+                entry["max_disp_m"] = max(entry["max_disp_m"], round(float(disp[k]), 3))
+            row["by_group"] = by_group
         if cport is not None:
             count = _geometry(node, cport, frame).intrinsicValue("primitivecount")
             if first_constraints is None:
@@ -494,7 +558,8 @@ def rbd_sim_report(
             quiet_movers = [
                 {"name": present[k], "disp_m": round(float(disp[k]), 3),
                  "direction": [round(float(v), 2) for v in disp_vec[k]],
-                 "rest": [round(float(v), 2) for v in rest[present[k]]]}
+                 "rest": [round(float(v), 2) for v in rest[present[k]]],
+                 **({"group": groups.get(present[k], "?")} if groups else {})}
                 for k in order[:limit] if disp[k] > moved_threshold
             ]
 
