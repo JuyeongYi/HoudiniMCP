@@ -173,6 +173,11 @@ hython -c "from houdini_mcp import get_registry; print(len(get_registry()))"
 | 9 | `houdini_mcp_chop` | [chop.md](chop.md) | ~14 | `numpy`, `hou.Track` |
 | 10 | `houdini_mcp_rig` | [rig.md](rig.md) | ~18 | `apex` |
 | 11 | `houdini_mcp_top` | [top.md](top.md) | ~14 | `pdg` |
+| 12 | `houdini_mcp_cop` | 팩 docstring | 2 (시작) | `hou.ImageLayer`, `OpenImageIO` |
+
+`houdini_mcp_cop` 은 설계 문서 없이 필요가 먼저 드러나 만들었다(2026-09-13). 성 씬의
+텍스처를 COP 으로 만들고도 결과를 볼 수 없어 품질 문제를 렌더에서야 알았다.
+지금은 `cop_preview`(composite view 대신 그림), `cop_layer_info`(레이어 수치)뿐이다.
 
 `houdini_mcp_base` 에 남은 결핍 86개는 팩이 아니라 base 확장이다.
 [base-gaps.md](base-gaps.md) 를 본다.
