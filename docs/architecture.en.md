@@ -34,7 +34,7 @@ MCP client (Claude Code, ...)
 | Unit | Package | Contains |
 |---|---|---|
 | Server | `houdini_mcp` | MCP server, registry, adapter, main-thread marshalling, undo and image helpers, logging. **No tools at all** |
-| Tool pack | `houdini_mcp_<domain>` | The tools of one domain. Uses only the server package's public API (`tool`, `undoable`, `image_result`, `get_registry`) |
+| Tool pack | `houdini_mcp_<domain>` | The tools of one domain. Uses only the server package's public API (`tool`, `undoable`, `image_result`, `run_in_main_thread`, `get_registry`) |
 
 Packs follow Houdini's context and domain hierarchy. Users can install or remove only the
 packs they need, and the log `category` matches the pack boundary, so a failure shows
@@ -255,6 +255,7 @@ The full rules are in the repository's `CLAUDE.md` (Korean).
 | `HOUDINI_MCP_LOG_LEVEL` | `INFO` | |
 | `HOUDINI_MCP_LOG_CONSOLE` | `0` | `1` also prints to the Houdini console |
 | `CRYPTOGRAPHY_OPENSSL_NO_LEGACY` | `1` (server JSON `env`) | removes the cause of the OpenSSL legacy warning on `import mcp` |
+| `FFMPEG_BIN_PATH` | unset | bin directory containing ffmpeg and ffprobe. Used only by the video tools (base `video`); without it, only those tools fail before doing anything. A build with drawtext and libx264 is recommended |
 
 The MCP SDK (`mcp>=2.2,<3`) is installed into Houdini's Python:
 `hython -m pip install -r requirements.txt`. For development, `scripts/run-houdini.ps1`

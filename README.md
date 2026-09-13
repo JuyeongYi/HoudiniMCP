@@ -21,6 +21,7 @@ SideFX Houdini **안에서** 도는 [MCP](https://modelcontextprotocol.io) 서�
 | Houdini | 22.0 이상 (GUI 세션) |
 | Python | Houdini 에 들어 있는 3.13 |
 | MCP Python SDK | `mcp>=2.2,<3` (Houdini 의 파이썬에 설치) |
+| ffmpeg (선택) | 영상 툴에만 필요. ffmpeg·ffprobe 가 든 bin 디렉토리를 `FFMPEG_BIN_PATH` 로 지정한다. drawtext·libx264 가 든 빌드를 권한다 |
 
 개발과 검증은 Houdini 22.0.368 / Windows 11 에서 했다. 코드는 Windows·Linux·macOS 를 모두
 지원하도록 쓴다.

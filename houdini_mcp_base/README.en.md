@@ -10,8 +10,8 @@
 |---|---|
 | Package JSON | `packages/houdini_mcp_base.json` |
 | requires | `houdini_mcp` |
-| Tools | 102 |
-| Modules (`TOOL_MODULES`) | `info`, `edit`, `parms`, `parmedit`, `transform`, `context`, `explain`, `analyze`, `geometry`, `cache`, `viewport`, `visualize`, `nodetypes`, `scene`, `deps`, `portability`, `takes`, `diagnose`, `anim`, `execute` |
+| Tools | 104 |
+| Modules (`TOOL_MODULES`) | `info`, `edit`, `parms`, `parmedit`, `transform`, `context`, `explain`, `analyze`, `geometry`, `cache`, `viewport`, `video`, `visualize`, `nodetypes`, `scene`, `deps`, `portability`, `takes`, `diagnose`, `anim`, `execute` |
 
 ## Overview
 
@@ -31,6 +31,7 @@ Holds what is used regardless of context or task. Split into modules only.
     geometry   geometry statistics and attributes - needed in DOPs and elsewhere, not just SOPs
     cache      disk caches - write them, check they are current, delete them
     viewport   viewport capture and framing - see the result with your own eyes
+    video      bakes frames into videos and makes A/B comparison videos - external ffmpeg from FFMPEG_BIN_PATH
     visualize  attribute visualizers - see how values are distributed as colors
     nodetypes  node type catalogue - see what can be created first
     scene      saving and opening scene files, frame range
@@ -47,6 +48,7 @@ Modules without tools are not in TOOL_MODULES.
                   houdini_mcp_hda
     paths         path expansion, keeping raw strings, sequences, $HFS. Every pack that handles
                   paths uses this and keeps no helper of its own
+    ffmpeg        finding and running external ffmpeg, encoder selection, drawtext, ffprobe verification
 
 Tools that only make sense in a specific context are split into dedicated packs (houdini_mcp_sop and so on).
 
@@ -126,6 +128,8 @@ Tools marked ✓ in the Undo column change the scene; one call is one undo step 
 | [`set_viewport_renderer`](#set_viewport_renderer) | `viewport` | Changes the viewport renderer. Without a name, lists the available ones. |  |
 | [`list_panes`](#list_panes) | `viewport` | The pane tabs currently open. Shows what the user is looking at. |  |
 | [`set_current_network`](#set_current_network) | `viewport` | Changes the network the network editor shows. |  |
+| [`make_video`](#make_video) | `video` | Bakes a viewport capture or an image sequence into one video, then reads it back to check it. |  |
+| [`compare_videos`](#compare_videos) | `video` | Bakes an A/B comparison video with two sources side by side (or stacked), then reads it back to check it. |  |
 | [`visualize_attribute`](#visualize_attribute) | `visualize` | Displays an attribute as colors in the viewport. | ✓ |
 | [`list_visualizers`](#list_visualizers) | `visualize` | Lists attached visualizers. |  |
 | [`set_visualizer_active`](#set_visualizer_active) | `visualize` | Turns a visualizer on or off. | ✓ |
@@ -1075,6 +1079,58 @@ Changes the network the network editor shows.
 | Argument | Type | Default | Description |
 |---|---|---|---|
 | `path` | `str` | required | Network path to open. Example: /obj/castle |
+
+### `video`
+
+Video tools - bake frames into one video, and put two sources side by side to compare them.
+
+#### make_video
+
+```python
+make_video(output: str, source: str | None = None, start: float | None = None, end: float | None = None, fps: float = 24.0, width: int = 1280, height: int = 720, label: str | None = None, font_file: str | None = None, exposure: float = 0.0, crf: int = 18, overwrite: bool = False)
+```
+
+Bakes a viewport capture or an image sequence into one video, then reads it back to check it.
+
+| Argument | Type | Default | Description |
+|---|---|---|---|
+| `output` | `str` | required | Video path to write. .mp4 / .mov / .mkv / .webm. Variables such as $HIP are allowed. |
+| `source` | `str \| None` | `None` | Omit for a viewport capture. An image sequence is a path with a frame token, such as `$HIP/render/beauty.$F4.exr` or `.../frame.%04d.png`. Given a video file (.mp4 and so on), it is re-baked with only the label added. |
+| `start` | `float \| None` | `None` | Start frame. For viewport captures, defaults to the playbar start. For sequences, omitting both start and end uses every existing file. |
+| `end` | `float \| None` | `None` | End frame (inclusive). |
+| `fps` | `float` | `24.0` | Frames per second. |
+| `width` | `int` | `1280` | Width in pixels for viewport captures. Sequences keep their original size. |
+| `height` | `int` | `720` | Height in pixels for viewport captures. |
+| `label` | `str \| None` | `None` | Text placed at the top left. Example: "flag loop - after relax" |
+| `font_file` | `str \| None` | `None` | Label font (.ttf/.ttc/.otf). If omitted, English uses ffmpeg's default font; if there is Korean, the OS Korean font is looked up. |
+| `exposure` | `float` | `0.0` | Exposure (stops) added to linear images such as EXR and HDR. Not used for other images. |
+| `crf` | `int` | `18` | Quality. Lower is better and makes larger files. 18 is hard to tell apart by eye. |
+| `overwrite` | `bool` | `False` | True to overwrite an existing file. |
+
+#### compare_videos
+
+```python
+compare_videos(a: str, b: str, output: str, label_a: str | None = 'A', label_b: str | None = 'B', layout: str = 'horizontal', start: float | None = None, end: float | None = None, fps: float = 24.0, size: int | None = None, font_file: str | None = None, exposure: float = 0.0, crf: int = 18, overwrite: bool = False)
+```
+
+Bakes an A/B comparison video with two sources side by side (or stacked), then reads it back to check it.
+
+| Argument | Type | Default | Description |
+|---|---|---|---|
+| `a` | `str` | required | Left (top) source. A video file or an image sequence path with a `$F4`/`%04d` frame token. |
+| `b` | `str` | required | Right (bottom) source. Same format as a. |
+| `output` | `str` | required | Video path to write. .mp4 / .mov / .mkv / .webm. |
+| `label_a` | `str \| None` | `'A'` | Text for a. None or an empty string adds no label. Example: "before" |
+| `label_b` | `str \| None` | `'B'` | Text for b. Example: "after relax x80" |
+| `layout` | `str` | `'horizontal'` | "horizontal" (side by side) or "vertical" (stacked). |
+| `start` | `float \| None` | `None` | Start frame for image sequence sources. Not used for video file sources. All existing files if omitted. |
+| `end` | `float \| None` | `None` | End frame (inclusive) for image sequence sources. |
+| `fps` | `float` | `24.0` | Frames per second. Image sequences are read at this rate and the result is written at it. |
+| `size` | `int \| None` | `None` | Common height for horizontal, common width for vertical (pixels). The smaller of the two sources if omitted. |
+| `font_file` | `str \| None` | `None` | Label font (.ttf/.ttc/.otf). If omitted, English uses ffmpeg's default font; if there is Korean, the OS Korean font is looked up. |
+| `exposure` | `float` | `0.0` | Exposure (stops) added to linear image sources such as EXR and HDR. |
+| `crf` | `int` | `18` | Quality. Lower is better and makes larger files. |
+| `overwrite` | `bool` | `False` | True to overwrite an existing file. |
 
 ### `visualize`
 

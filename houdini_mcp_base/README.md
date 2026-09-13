@@ -10,8 +10,8 @@ English: [README.en.md](README.en.md)
 |---|---|
 | 패키지 JSON | `packages/houdini_mcp_base.json` |
 | requires | `houdini_mcp` |
-| 툴 | 102개 |
-| 모듈 (`TOOL_MODULES`) | `info`, `edit`, `parms`, `parmedit`, `transform`, `context`, `explain`, `analyze`, `geometry`, `cache`, `viewport`, `visualize`, `nodetypes`, `scene`, `deps`, `portability`, `takes`, `diagnose`, `anim`, `execute` |
+| 툴 | 104개 |
+| 모듈 (`TOOL_MODULES`) | `info`, `edit`, `parms`, `parmedit`, `transform`, `context`, `explain`, `analyze`, `geometry`, `cache`, `viewport`, `video`, `visualize`, `nodetypes`, `scene`, `deps`, `portability`, `takes`, `diagnose`, `anim`, `execute` |
 
 ## 개요
 
@@ -31,6 +31,7 @@ English: [README.en.md](README.en.md)
     geometry   지오메트리 통계·어트리뷰트 - SOP 뿐 아니라 DOP 등에서도 필요하다
     cache      디스크 캐시 - 쓰고, 최신인지 보고, 지운다
     viewport   뷰포트 캡처와 프레이밍 - 만든 결과를 눈으로 확인한다
+    video      프레임을 영상으로 굽고 A/B 비교 영상을 만든다 - FFMPEG_BIN_PATH 의 외부 ffmpeg
     visualize  어트리뷰트 비주얼라이저 - 값이 어떻게 퍼져 있는지 색으로 본다
     nodetypes  노드 타입 카탈로그 - 무엇을 만들 수 있는지 먼저 본다
     scene      씬 파일 저장·열기, 프레임 범위
@@ -47,6 +48,7 @@ English: [README.en.md](README.en.md)
                   houdini_mcp_hda 가 함께 쓴다
     paths         경로 전개·원문 보존·시퀀스·$HFS. 경로를 다루는 팩은 전부
                   이것을 쓰고 자기 헬퍼를 두지 않는다
+    ffmpeg        외부 ffmpeg 찾기·실행·인코더 선택·drawtext·ffprobe 검증
 
 특정 컨텍스트에만 의미가 있는 툴은 전용 팩(houdini_mcp_sop 등)으로 분리한다.
 
@@ -126,6 +128,8 @@ Undo 열이 ✓ 인 툴은 씬을 바꾸며, 호출 하나가 Undo 하나로 묶
 | [`set_viewport_renderer`](#set_viewport_renderer) | `viewport` | 뷰포트 렌더러를 바꾼다. 이름을 생략하면 고를 수 있는 것을 알려 준다. |  |
 | [`list_panes`](#list_panes) | `viewport` | 지금 열려 있는 패널 탭들. 사용자가 무엇을 보고 있는지 알 수 있다. |  |
 | [`set_current_network`](#set_current_network) | `viewport` | 네트워크 에디터가 보는 네트워크를 바꾼다. |  |
+| [`make_video`](#make_video) | `video` | 뷰포트 캡처나 이미지 시퀀스를 영상 하나로 굽고, 다시 읽어 확인한다. |  |
+| [`compare_videos`](#compare_videos) | `video` | 두 소스를 나란히(또는 위아래로) 붙인 A/B 비교 영상을 굽고, 다시 읽어 확인한다. |  |
 | [`visualize_attribute`](#visualize_attribute) | `visualize` | 어트리뷰트를 뷰포트에 색으로 표시한다. | ✓ |
 | [`list_visualizers`](#list_visualizers) | `visualize` | 붙어 있는 비주얼라이저를 나열한다. |  |
 | [`set_visualizer_active`](#set_visualizer_active) | `visualize` | 비주얼라이저를 켜거나 끈다. | ✓ |
@@ -1075,6 +1079,58 @@ set_current_network(path: str)
 | 인자 | 타입 | 기본값 | 설명 |
 |---|---|---|---|
 | `path` | `str` | 필수 | 열 네트워크 경로. 예: /obj/castle |
+
+### `video`
+
+영상 툴 - 프레임을 영상 하나로 굽고, 두 소스를 나란히 붙여 비교한다.
+
+#### make_video
+
+```python
+make_video(output: str, source: str | None = None, start: float | None = None, end: float | None = None, fps: float = 24.0, width: int = 1280, height: int = 720, label: str | None = None, font_file: str | None = None, exposure: float = 0.0, crf: int = 18, overwrite: bool = False)
+```
+
+뷰포트 캡처나 이미지 시퀀스를 영상 하나로 굽고, 다시 읽어 확인한다.
+
+| 인자 | 타입 | 기본값 | 설명 |
+|---|---|---|---|
+| `output` | `str` | 필수 | 쓸 영상 경로. .mp4 / .mov / .mkv / .webm. $HIP 같은 변수를 써도 된다. |
+| `source` | `str \| None` | `None` | 생략하면 뷰포트 캡처. 이미지 시퀀스는 `$HIP/render/beauty.$F4.exr` 나 `.../frame.%04d.png` 처럼 프레임 토큰이 든 경로. 영상 파일(.mp4 등)을 주면 라벨만 입혀 다시 굽는다. |
+| `start` | `float \| None` | `None` | 시작 프레임. 뷰포트 캡처에서 생략하면 플레이바 시작. 시퀀스에서 start/end 를 둘 다 생략하면 있는 파일을 전부 쓴다. |
+| `end` | `float \| None` | `None` | 끝 프레임(포함). |
+| `fps` | `float` | `24.0` | 초당 프레임. |
+| `width` | `int` | `1280` | 뷰포트 캡처의 가로 픽셀. 시퀀스는 원본 크기를 쓴다. |
+| `height` | `int` | `720` | 뷰포트 캡처의 세로 픽셀. |
+| `label` | `str \| None` | `None` | 왼쪽 위에 넣을 글자. 예: "flag loop - after relax" |
+| `font_file` | `str \| None` | `None` | 라벨 폰트(.ttf/.ttc/.otf). 생략하면 영문은 ffmpeg 기본 글꼴, 한글이 있으면 OS 의 한글 글꼴을 찾는다. |
+| `exposure` | `float` | `0.0` | EXR·HDR 같은 선형 이미지에 더할 노출(스톱). 다른 이미지에는 쓰지 않는다. |
+| `crf` | `int` | `18` | 화질. 낮을수록 좋고 파일이 커진다. 18 이면 눈으로 구분하기 어렵다. |
+| `overwrite` | `bool` | `False` | 이미 있는 파일을 덮어쓸 때 True. |
+
+#### compare_videos
+
+```python
+compare_videos(a: str, b: str, output: str, label_a: str | None = 'A', label_b: str | None = 'B', layout: str = 'horizontal', start: float | None = None, end: float | None = None, fps: float = 24.0, size: int | None = None, font_file: str | None = None, exposure: float = 0.0, crf: int = 18, overwrite: bool = False)
+```
+
+두 소스를 나란히(또는 위아래로) 붙인 A/B 비교 영상을 굽고, 다시 읽어 확인한다.
+
+| 인자 | 타입 | 기본값 | 설명 |
+|---|---|---|---|
+| `a` | `str` | 필수 | 왼쪽(위) 소스. 영상 파일 또는 `$F4`·`%04d` 프레임 토큰이 든 이미지 시퀀스 경로. |
+| `b` | `str` | 필수 | 오른쪽(아래) 소스. 형식은 a 와 같다. |
+| `output` | `str` | 필수 | 쓸 영상 경로. .mp4 / .mov / .mkv / .webm. |
+| `label_a` | `str \| None` | `'A'` | a 에 넣을 글자. 빈 문자열이나 None 이면 넣지 않는다. 예: "before" |
+| `label_b` | `str \| None` | `'B'` | b 에 넣을 글자. 예: "after relax x80" |
+| `layout` | `str` | `'horizontal'` | "horizontal"(나란히) 또는 "vertical"(위아래). |
+| `start` | `float \| None` | `None` | 이미지 시퀀스 소스의 시작 프레임. 영상 파일 소스에는 쓰지 않는다. 생략하면 있는 파일 전부. |
+| `end` | `float \| None` | `None` | 이미지 시퀀스 소스의 끝 프레임(포함). |
+| `fps` | `float` | `24.0` | 초당 프레임. 이미지 시퀀스를 이 속도로 읽고, 결과도 이 속도로 쓴다. |
+| `size` | `int \| None` | `None` | horizontal 이면 공통 높이, vertical 이면 공통 너비(픽셀). 생략하면 두 소스 중 작은 쪽. |
+| `font_file` | `str \| None` | `None` | 라벨 폰트(.ttf/.ttc/.otf). 생략하면 영문은 ffmpeg 기본 글꼴, 한글이 있으면 OS 의 한글 글꼴을 찾는다. |
+| `exposure` | `float` | `0.0` | EXR·HDR 같은 선형 이미지 소스에 더할 노출(스톱). |
+| `crf` | `int` | `18` | 화질. 낮을수록 좋고 파일이 커진다. |
+| `overwrite` | `bool` | `False` | 이미 있는 파일을 덮어쓸 때 True. |
 
 ### `visualize`
 

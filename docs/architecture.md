@@ -33,7 +33,7 @@ MCP 클라이언트 (Claude Code 등)
 | 단위 | 패키지 | 담는 것 |
 |---|---|---|
 | 서버 | `houdini_mcp` | MCP 서버, 레지스트리, 어댑터, 메인 스레드 마샬링, Undo·이미지 헬퍼, 로깅. **툴은 하나도 없다** |
-| 툴 팩 | `houdini_mcp_<도메인>` | 한 도메인의 툴. 서버 패키지의 공개 API(`tool`, `undoable`, `image_result`, `get_registry`)만 쓴다 |
+| 툴 팩 | `houdini_mcp_<도메인>` | 한 도메인의 툴. 서버 패키지의 공개 API(`tool`, `undoable`, `image_result`, `run_in_main_thread`, `get_registry`)만 쓴다 |
 
 툴 팩은 Houdini 의 컨텍스트·도메인 계층을 따라 나눈다. 필요한 팩만 설치하거나 뺄 수
 있고, 로그의 `category` 가 팩 경계와 일치해 어디서 난 문제인지 바로 드러난다.
@@ -245,6 +245,7 @@ MCP 로 노출된다(핫 리로드).
 | `HOUDINI_MCP_LOG_LEVEL` | `INFO` | |
 | `HOUDINI_MCP_LOG_CONSOLE` | `0` | `1` 이면 Houdini 콘솔에도 출력 |
 | `CRYPTOGRAPHY_OPENSSL_NO_LEGACY` | `1` (서버 JSON 의 `env`) | `import mcp` 의 OpenSSL legacy 경고 원인을 끈다 |
+| `FFMPEG_BIN_PATH` | 없음 | ffmpeg·ffprobe 가 든 bin 디렉토리. 영상 툴(base `video`)만 쓰고, 없으면 그 툴만 시작 전에 에러를 낸다. drawtext·libx264 가 든 빌드를 권한다 |
 
 MCP SDK(`mcp>=2.2,<3`)는 Houdini 의 파이썬에 설치한다: `hython -m pip install -r requirements.txt`.
 개발용 실행은 `scripts/run-houdini.ps1` — `packages/` 를 `HOUDINI_PACKAGE_DIR` 앞에 붙여 모든

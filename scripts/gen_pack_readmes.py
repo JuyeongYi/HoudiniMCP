@@ -8,8 +8,10 @@ README 가 아니라 docstring 을 고친 뒤 다시 생성한다.
 
     docs/i18n/en/<팩>.json   팩 개요, 모듈 요약, 툴 설명, 인자 설명의 영어 번역
 
-카탈로그 항목마다 번역할 때의 원문 해시(source_hash)를 둔다. docstring 이 바뀌면
-해시가 어긋나 stale 로 잡힌다. 번역이 없거나 낡은 항목은 README.en.md 에 원문을
+카탈로그 항목마다 원문(source)과 그 해시(source_hash)를 둔다. docstring 이 바뀌면
+--sync-i18n 이 원문·해시를 새 것으로 바꾸고 `"stale": true` 를 단다. 영어를 고친 뒤
+stale 을 지우면 최신 번역으로 본다. 해시가 원문과 다르거나 stale 이 남아 있으면
+--check 가 실패한다. 번역이 없거나 낡은 항목은 README.en.md 에 원문을
 그대로 싣고 표시한다.
 
 Houdini 없이 돈다. 코드를 import 하지 않고 AST 로만 읽는다(hou 가 없어도 된다).
@@ -203,7 +205,7 @@ def load_catalog(pack: PackInfo) -> dict:
 
 
 def _entry_ok(entry: dict | None, source: str, keys: tuple[str, ...]) -> bool:
-    if not entry or entry.get("source_hash") != _hash(source):
+    if not entry or entry.get("stale") or entry.get("source_hash") != _hash(source):
         return False
     return all(str(entry.get(k, "")).strip() for k in keys)
 
@@ -219,7 +221,10 @@ def sync_catalog(pack: PackInfo) -> tuple[dict, list[str]]:
             entry = {"source": source, "source_hash": _hash(source), **fields}
             section[key] = entry
         elif entry.get("source_hash") != _hash(source):
+            # 해시는 바로 새 원문으로 옮기고 stale 로 표시한다. 번역을 고친 사람이
+            # stale 을 지우면 최신 번역으로 본다.
             entry["source"] = source
+            entry["source_hash"] = _hash(source)
             entry["stale"] = True
             for name, value in fields.items():
                 entry.setdefault(name, value)

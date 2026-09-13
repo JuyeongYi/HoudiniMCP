@@ -2,9 +2,9 @@
   "pack": "houdini_mcp_base",
   "overview": {
     "text": {
-      "source": "모든 작업의 토대가 되는 툴 팩.\n\n어떤 컨텍스트에서 무엇을 하든 쓰이는 것들을 담는다. 모듈로만 나눈다.\n\n    info       씬·노드·그래프 조회\n    edit       네트워크 종류를 가리지 않는 노드 생성·조작·연결\n    parms      파라미터 조회\n    parmedit   파라미터 자체를 고친다 - 스페어 추가, 링크, 잠금, 되돌리기\n    transform  노드 변환과 OBJ 계층 - world/parm/local/pre 를 갈라서 본다\n    context    노드 트리와 의존 관계 - 직접 연결뿐 아니라 간접 참조까지\n    explain    노드 하나를 종합 설명 - 다섯 번 부르던 것을 한 번으로\n    analyze    네트워크 전체를 훑는다 - 요약, 쿡 순서, 비싼 노드, 스냅샷 비교\n    geometry   지오메트리 통계·어트리뷰트 - SOP 뿐 아니라 DOP 등에서도 필요하다\n    cache      디스크 캐시 - 쓰고, 최신인지 보고, 지운다\n    viewport   뷰포트 캡처와 프레이밍 - 만든 결과를 눈으로 확인한다\n    visualize  어트리뷰트 비주얼라이저 - 값이 어떻게 퍼져 있는지 색으로 본다\n    nodetypes  노드 타입 카탈로그 - 무엇을 만들 수 있는지 먼저 본다\n    scene      씬 파일 저장·열기, 프레임 범위\n    deps       씬의 파일 참조 - 목록·수집·경로 치환. hou.fileReferences() 로 얻는다\n    portability  씬을 다른 기계로 옮길 수 있는지 판정 - 없는 파일, 박힌 경로\n    takes      테이크 - 파라미터 변형을 갈라 두고 오간다\n    diagnose   에러·경고 조회와 쿡 - 무엇이 잘못됐는지 알아낸다\n    anim       파라미터 식과 키프레임\n    execute    툴로 안 되는 일을 하는 탈출구. 마지막 수단이다\n\n툴이 없는 모듈은 TOOL_MODULES 에 넣지 않는다.\n\n    parmtemplate  hou.ParmTemplate 을 만드는 공통 헬퍼. parmedit 과\n                  houdini_mcp_hda 가 함께 쓴다\n    paths         경로 전개·원문 보존·시퀀스·$HFS. 경로를 다루는 팩은 전부\n                  이것을 쓰고 자기 헬퍼를 두지 않는다\n\n특정 컨텍스트에만 의미가 있는 툴은 전용 팩(houdini_mcp_sop 등)으로 분리한다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
-      "source_hash": "871b48d1d1c7",
-      "en": "The tool pack every task builds on.\n\nHolds what is used regardless of context or task. Split into modules only.\n\n    info       scene, node and graph queries\n    edit       node creation, manipulation and wiring for any network type\n    parms      parameter queries\n    parmedit   changes parameters themselves - add spares, link, lock, revert\n    transform  node transforms and the OBJ hierarchy - world/parm/local/pre shown separately\n    context    node trees and dependencies - indirect references as well as direct connections\n    explain    a combined explanation of one node - one call instead of five\n    analyze    scans a whole network - summary, cook order, expensive nodes, snapshot comparison\n    geometry   geometry statistics and attributes - needed in DOPs and elsewhere, not just SOPs\n    cache      disk caches - write them, check they are current, delete them\n    viewport   viewport capture and framing - see the result with your own eyes\n    visualize  attribute visualizers - see how values are distributed as colors\n    nodetypes  node type catalogue - see what can be created first\n    scene      saving and opening scene files, frame range\n    deps       the scene's file references - listing, collecting, path remapping. Obtained from hou.fileReferences()\n    portability  decides whether a scene can move to another machine - missing files, baked-in paths\n    takes      takes - keep parameter variations apart and switch between them\n    diagnose   error/warning queries and cooking - find out what went wrong\n    anim       parameter expressions and keyframes\n    execute    escape hatch for what the tools cannot do. A last resort\n\nModules without tools are not in TOOL_MODULES.\n\n    parmtemplate  shared helper that builds hou.ParmTemplate. Used by both parmedit and\n                  houdini_mcp_hda\n    paths         path expansion, keeping raw strings, sequences, $HFS. Every pack that handles\n                  paths uses this and keeps no helper of its own\n\nTools that only make sense in a specific context are split into dedicated packs (houdini_mcp_sop and so on).\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
+      "source": "모든 작업의 토대가 되는 툴 팩.\n\n어떤 컨텍스트에서 무엇을 하든 쓰이는 것들을 담는다. 모듈로만 나눈다.\n\n    info       씬·노드·그래프 조회\n    edit       네트워크 종류를 가리지 않는 노드 생성·조작·연결\n    parms      파라미터 조회\n    parmedit   파라미터 자체를 고친다 - 스페어 추가, 링크, 잠금, 되돌리기\n    transform  노드 변환과 OBJ 계층 - world/parm/local/pre 를 갈라서 본다\n    context    노드 트리와 의존 관계 - 직접 연결뿐 아니라 간접 참조까지\n    explain    노드 하나를 종합 설명 - 다섯 번 부르던 것을 한 번으로\n    analyze    네트워크 전체를 훑는다 - 요약, 쿡 순서, 비싼 노드, 스냅샷 비교\n    geometry   지오메트리 통계·어트리뷰트 - SOP 뿐 아니라 DOP 등에서도 필요하다\n    cache      디스크 캐시 - 쓰고, 최신인지 보고, 지운다\n    viewport   뷰포트 캡처와 프레이밍 - 만든 결과를 눈으로 확인한다\n    video      프레임을 영상으로 굽고 A/B 비교 영상을 만든다 - FFMPEG_BIN_PATH 의 외부 ffmpeg\n    visualize  어트리뷰트 비주얼라이저 - 값이 어떻게 퍼져 있는지 색으로 본다\n    nodetypes  노드 타입 카탈로그 - 무엇을 만들 수 있는지 먼저 본다\n    scene      씬 파일 저장·열기, 프레임 범위\n    deps       씬의 파일 참조 - 목록·수집·경로 치환. hou.fileReferences() 로 얻는다\n    portability  씬을 다른 기계로 옮길 수 있는지 판정 - 없는 파일, 박힌 경로\n    takes      테이크 - 파라미터 변형을 갈라 두고 오간다\n    diagnose   에러·경고 조회와 쿡 - 무엇이 잘못됐는지 알아낸다\n    anim       파라미터 식과 키프레임\n    execute    툴로 안 되는 일을 하는 탈출구. 마지막 수단이다\n\n툴이 없는 모듈은 TOOL_MODULES 에 넣지 않는다.\n\n    parmtemplate  hou.ParmTemplate 을 만드는 공통 헬퍼. parmedit 과\n                  houdini_mcp_hda 가 함께 쓴다\n    paths         경로 전개·원문 보존·시퀀스·$HFS. 경로를 다루는 팩은 전부\n                  이것을 쓰고 자기 헬퍼를 두지 않는다\n    ffmpeg        외부 ffmpeg 찾기·실행·인코더 선택·drawtext·ffprobe 검증\n\n특정 컨텍스트에만 의미가 있는 툴은 전용 팩(houdini_mcp_sop 등)으로 분리한다.\n\n여기서 모듈을 import 하지 않는다. register_pack 이 TOOL_MODULES 를 읽어 하나씩\n격리해서 읽으므로, 모듈 하나가 깨져도 나머지 툴은 등록된다.",
+      "source_hash": "db072c0b6d27",
+      "en": "The tool pack every task builds on.\n\nHolds what is used regardless of context or task. Split into modules only.\n\n    info       scene, node and graph queries\n    edit       node creation, manipulation and wiring for any network type\n    parms      parameter queries\n    parmedit   changes parameters themselves - add spares, link, lock, revert\n    transform  node transforms and the OBJ hierarchy - world/parm/local/pre shown separately\n    context    node trees and dependencies - indirect references as well as direct connections\n    explain    a combined explanation of one node - one call instead of five\n    analyze    scans a whole network - summary, cook order, expensive nodes, snapshot comparison\n    geometry   geometry statistics and attributes - needed in DOPs and elsewhere, not just SOPs\n    cache      disk caches - write them, check they are current, delete them\n    viewport   viewport capture and framing - see the result with your own eyes\n    video      bakes frames into videos and makes A/B comparison videos - external ffmpeg from FFMPEG_BIN_PATH\n    visualize  attribute visualizers - see how values are distributed as colors\n    nodetypes  node type catalogue - see what can be created first\n    scene      saving and opening scene files, frame range\n    deps       the scene's file references - listing, collecting, path remapping. Obtained from hou.fileReferences()\n    portability  decides whether a scene can move to another machine - missing files, baked-in paths\n    takes      takes - keep parameter variations apart and switch between them\n    diagnose   error/warning queries and cooking - find out what went wrong\n    anim       parameter expressions and keyframes\n    execute    escape hatch for what the tools cannot do. A last resort\n\nModules without tools are not in TOOL_MODULES.\n\n    parmtemplate  shared helper that builds hou.ParmTemplate. Used by both parmedit and\n                  houdini_mcp_hda\n    paths         path expansion, keeping raw strings, sequences, $HFS. Every pack that handles\n                  paths uses this and keeps no helper of its own\n    ffmpeg        finding and running external ffmpeg, encoder selection, drawtext, ffprobe verification\n\nTools that only make sense in a specific context are split into dedicated packs (houdini_mcp_sop and so on).\n\nModules are not imported here. register_pack reads TOOL_MODULES and loads each module in\nisolation, so one broken module does not stop the other tools from registering."
     }
   },
   "modules": {
@@ -107,6 +107,11 @@
       "source": "툴로 안 되는 일을 하는 탈출구.",
       "source_hash": "19fda4b7a242",
       "en": "Escape hatch for what the tools cannot do."
+    },
+    "video": {
+      "source": "영상 툴 - 프레임을 영상 하나로 굽고, 두 소스를 나란히 붙여 비교한다.",
+      "source_hash": "67969af97bcf",
+      "en": "Video tools - bake frames into one video, and put two sources side by side to compare them."
     }
   },
   "tools": {
@@ -1065,6 +1070,46 @@
       "summary": "Runs HScript commands.",
       "args": {
         "command": "One or more lines of HScript."
+      }
+    },
+    "make_video": {
+      "source": "뷰포트 캡처나 이미지 시퀀스를 영상 하나로 굽고, 다시 읽어 확인한다.\noutput: 쓸 영상 경로. .mp4 / .mov / .mkv / .webm. $HIP 같은 변수를 써도 된다.\nsource: 생략하면 뷰포트 캡처. 이미지 시퀀스는 `$HIP/render/beauty.$F4.exr` 나 `.../frame.%04d.png` 처럼 프레임 토큰이 든 경로. 영상 파일(.mp4 등)을 주면 라벨만 입혀 다시 굽는다.\nstart: 시작 프레임. 뷰포트 캡처에서 생략하면 플레이바 시작. 시퀀스에서 start/end 를 둘 다 생략하면 있는 파일을 전부 쓴다.\nend: 끝 프레임(포함).\nfps: 초당 프레임.\nwidth: 뷰포트 캡처의 가로 픽셀. 시퀀스는 원본 크기를 쓴다.\nheight: 뷰포트 캡처의 세로 픽셀.\nlabel: 왼쪽 위에 넣을 글자. 예: \"flag loop - after relax\"\nfont_file: 라벨 폰트(.ttf/.ttc/.otf). 생략하면 영문은 ffmpeg 기본 글꼴, 한글이 있으면 OS 의 한글 글꼴을 찾는다.\nexposure: EXR·HDR 같은 선형 이미지에 더할 노출(스톱). 다른 이미지에는 쓰지 않는다.\ncrf: 화질. 낮을수록 좋고 파일이 커진다. 18 이면 눈으로 구분하기 어렵다.\noverwrite: 이미 있는 파일을 덮어쓸 때 True.",
+      "source_hash": "02e7e7b36d8d",
+      "summary": "Bakes a viewport capture or an image sequence into one video, then reads it back to check it.",
+      "args": {
+        "output": "Video path to write. .mp4 / .mov / .mkv / .webm. Variables such as $HIP are allowed.",
+        "source": "Omit for a viewport capture. An image sequence is a path with a frame token, such as `$HIP/render/beauty.$F4.exr` or `.../frame.%04d.png`. Given a video file (.mp4 and so on), it is re-baked with only the label added.",
+        "start": "Start frame. For viewport captures, defaults to the playbar start. For sequences, omitting both start and end uses every existing file.",
+        "end": "End frame (inclusive).",
+        "fps": "Frames per second.",
+        "width": "Width in pixels for viewport captures. Sequences keep their original size.",
+        "height": "Height in pixels for viewport captures.",
+        "label": "Text placed at the top left. Example: \"flag loop - after relax\"",
+        "font_file": "Label font (.ttf/.ttc/.otf). If omitted, English uses ffmpeg's default font; if there is Korean, the OS Korean font is looked up.",
+        "exposure": "Exposure (stops) added to linear images such as EXR and HDR. Not used for other images.",
+        "crf": "Quality. Lower is better and makes larger files. 18 is hard to tell apart by eye.",
+        "overwrite": "True to overwrite an existing file."
+      }
+    },
+    "compare_videos": {
+      "source": "두 소스를 나란히(또는 위아래로) 붙인 A/B 비교 영상을 굽고, 다시 읽어 확인한다.\na: 왼쪽(위) 소스. 영상 파일 또는 `$F4`·`%04d` 프레임 토큰이 든 이미지 시퀀스 경로.\nb: 오른쪽(아래) 소스. 형식은 a 와 같다.\noutput: 쓸 영상 경로. .mp4 / .mov / .mkv / .webm.\nlabel_a: a 에 넣을 글자. 빈 문자열이나 None 이면 넣지 않는다. 예: \"before\"\nlabel_b: b 에 넣을 글자. 예: \"after relax x80\"\nlayout: \"horizontal\"(나란히) 또는 \"vertical\"(위아래).\nstart: 이미지 시퀀스 소스의 시작 프레임. 영상 파일 소스에는 쓰지 않는다. 생략하면 있는 파일 전부.\nend: 이미지 시퀀스 소스의 끝 프레임(포함).\nfps: 초당 프레임. 이미지 시퀀스를 이 속도로 읽고, 결과도 이 속도로 쓴다.\nsize: horizontal 이면 공통 높이, vertical 이면 공통 너비(픽셀). 생략하면 두 소스 중 작은 쪽.\nfont_file: 라벨 폰트(.ttf/.ttc/.otf). 생략하면 영문은 ffmpeg 기본 글꼴, 한글이 있으면 OS 의 한글 글꼴을 찾는다.\nexposure: EXR·HDR 같은 선형 이미지 소스에 더할 노출(스톱).\ncrf: 화질. 낮을수록 좋고 파일이 커진다.\noverwrite: 이미 있는 파일을 덮어쓸 때 True.",
+      "source_hash": "6cfef050ee74",
+      "summary": "Bakes an A/B comparison video with two sources side by side (or stacked), then reads it back to check it.",
+      "args": {
+        "a": "Left (top) source. A video file or an image sequence path with a `$F4`/`%04d` frame token.",
+        "b": "Right (bottom) source. Same format as a.",
+        "output": "Video path to write. .mp4 / .mov / .mkv / .webm.",
+        "label_a": "Text for a. None or an empty string adds no label. Example: \"before\"",
+        "label_b": "Text for b. Example: \"after relax x80\"",
+        "layout": "\"horizontal\" (side by side) or \"vertical\" (stacked).",
+        "start": "Start frame for image sequence sources. Not used for video file sources. All existing files if omitted.",
+        "end": "End frame (inclusive) for image sequence sources.",
+        "fps": "Frames per second. Image sequences are read at this rate and the result is written at it.",
+        "size": "Common height for horizontal, common width for vertical (pixels). The smaller of the two sources if omitted.",
+        "font_file": "Label font (.ttf/.ttc/.otf). If omitted, English uses ffmpeg's default font; if there is Korean, the OS Korean font is looked up.",
+        "exposure": "Exposure (stops) added to linear image sources such as EXR and HDR.",
+        "crf": "Quality. Lower is better and makes larger files.",
+        "overwrite": "True to overwrite an existing file."
       }
     }
   }

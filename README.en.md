@@ -23,6 +23,7 @@ check the results as images.
 | Houdini | 22.0 or later (GUI session) |
 | Python | 3.13 as shipped with Houdini |
 | MCP Python SDK | `mcp>=2.2,<3` (installed into Houdini's Python) |
+| ffmpeg (optional) | Needed only by the video tools. Set `FFMPEG_BIN_PATH` to the bin directory containing ffmpeg and ffprobe. A build with drawtext and libx264 is recommended |
 
 Development and verification were done on Houdini 22.0.368 / Windows 11. The code is written to
 support Windows, Linux and macOS.
